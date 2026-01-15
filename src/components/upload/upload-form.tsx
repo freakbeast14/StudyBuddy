@@ -1,13 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FileText, Loader2, Send } from "lucide-react";
+import { FileText, Loader2, Plus, Send, UploadCloud } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { JOBS } from "@/jobs/types";
 
 interface UploadFormState {
   courseId: string;
@@ -31,10 +30,10 @@ interface DocumentRow {
 type UploadStatus = "idle" | "uploading" | "queued" | "error";
 
 const statusStyles: Record<DocumentRow["status"], { label: string; className: string }> = {
-  pending: { label: "Pending", className: "border-amber-500/30 text-amber-600" },
-  processing: { label: "Processing", className: "border-sky-500/30 text-sky-600" },
-  ready: { label: "Ready", className: "border-emerald-500/30 text-emerald-600" },
-  failed: { label: "Failed", className: "border-rose-500/30 text-rose-600" },
+  pending: { label: "Queued", className: "border-amber-500/30 bg-amber-500/10 text-amber-700" },
+  processing: { label: "Processing", className: "border-sky-500/30 bg-sky-500/10 text-sky-700" },
+  ready: { label: "Ready", className: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700" },
+  failed: { label: "Needs attention", className: "border-rose-500/30 bg-rose-500/10 text-rose-700" },
 };
 
 export function UploadForm() {
@@ -181,7 +180,7 @@ export function UploadForm() {
             id="course"
             value={state.courseId}
             onChange={(e) => setState((prev) => ({ ...prev, courseId: e.target.value }))}
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="flex h-11 w-full rounded-md border border-input/70 bg-white/80 px-3 py-2 text-sm shadow-sm ring-offset-background transition-all hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             required
           >
             <option value="" disabled>
@@ -198,10 +197,11 @@ export function UploadForm() {
               id="new-course"
               value={newCourseTitle}
               onChange={(e) => setNewCourseTitle(e.target.value)}
-              placeholder="New course title"
+              placeholder="New course name"
             />
             <Button type="button" variant="outline" onClick={handleCreateCourse} disabled={isCreatingCourse}>
-              {isCreatingCourse ? "Creating..." : "Create course"}
+              <Plus className="mr-2 h-4 w-4" />
+              {isCreatingCourse ? "Creating..." : "Create"}
             </Button>
           </div>
           {courseError ? <p className="text-xs text-rose-500">{courseError}</p> : null}
@@ -216,8 +216,8 @@ export function UploadForm() {
           />
         </div>
         <div className="grid gap-3">
-          <Label htmlFor="file">Upload PDF</Label>
-          <div className="flex items-center gap-3 rounded-lg border border-dashed p-3">
+          <Label htmlFor="file">PDF file</Label>
+          <div className="flex items-center gap-3 rounded-lg border border-dashed border-primary/40 bg-white/70 p-3">
             <FileText className="h-5 w-5 text-muted-foreground" />
             <Input
               id="file"
@@ -228,13 +228,11 @@ export function UploadForm() {
             />
           </div>
           <p className="text-xs text-muted-foreground">
-            Files are saved to{" "}
-            <code className="rounded bg-muted px-1 py-0.5">./data/uploads/{"{documentId}"}.pdf</code> then a{" "}
-            <code className="rounded bg-muted px-1 py-0.5">{JOBS.PROCESS_DOCUMENT}</code> job is enqueued.
+            We will read the PDF, build lessons, and create practice materials with source links.
           </p>
         </div>
 
-        <div className="flex items-center gap-3 rounded-lg border p-3 text-sm">
+        <div className="flex items-center gap-3 rounded-lg border border-white/70 bg-white/70 p-3 text-sm">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
             {uploadStatus === "queued" ? (
               <Send className="h-5 w-5" />
@@ -246,7 +244,7 @@ export function UploadForm() {
           </div>
           <div className="flex-1">
             <p className="font-medium">
-              Status: {uploadStatus === "idle" ? "not started" : uploadStatus === "queued" ? "queued" : uploadStatus}
+              Status: {uploadStatus === "idle" ? "ready to upload" : uploadStatus === "queued" ? "queued" : uploadStatus}
             </p>
             <Progress value={progress} className="mt-2" />
           </div>
@@ -256,7 +254,8 @@ export function UploadForm() {
         {errorMessage ? <p className="text-sm text-rose-500">{errorMessage}</p> : null}
 
         <Button type="submit" className="w-full" disabled={uploadStatus === "uploading"}>
-          {uploadStatus === "idle" && "Upload & enqueue"}
+          <UploadCloud className="mr-2 h-4 w-4" />
+          {uploadStatus === "idle" && "Upload"}
           {uploadStatus === "uploading" && "Uploading..."}
           {uploadStatus === "queued" && "Queued..."}
           {uploadStatus === "error" && "Try again"}
@@ -269,13 +268,16 @@ export function UploadForm() {
           <p className="text-xs text-muted-foreground">{documents.length} total</p>
         </div>
         {documents.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No uploads yet. Drop a PDF to start ingestion.</p>
+          <p className="text-sm text-muted-foreground">No uploads yet. Drop a PDF to begin.</p>
         ) : (
           <div className="space-y-2">
             {documents.map((doc) => {
               const status = statusStyles[doc.status];
               return (
-                <div key={doc.id} className="flex items-start justify-between gap-4 rounded-lg border p-3 text-sm">
+                <div
+                  key={doc.id}
+                  className="flex items-start justify-between gap-4 rounded-lg border border-white/70 bg-white/70 p-3 text-sm"
+                >
                   <div>
                     <p className="font-medium">{doc.title}</p>
                     <p className="text-xs text-muted-foreground">

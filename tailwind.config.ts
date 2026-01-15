@@ -12,7 +12,8 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["Inter", ...fontFamily.sans],
+        sans: ["var(--font-body)", ...fontFamily.sans],
+        display: ["var(--font-display)", ...fontFamily.sans],
       },
       colors: {
         background: "hsl(var(--background))",

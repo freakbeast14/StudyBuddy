@@ -1,14 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import { ArrowLeft, ArrowRight, Eye } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpen, RefreshCw, RotateCcw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SourceDrawer } from "@/components/source/source-drawer";
+import { FlashcardDeck, type DeckRating } from "@/components/daily/flashcard-deck";
 
 const ratings = ["Again", "Hard", "Good", "Easy"] as const;
 const MAX_CARDS = 10;
@@ -95,7 +95,7 @@ export function DailySession() {
   const chunkIds = useMemo(() => card?.citations?.chunkIds ?? [], [card]);
 
   const handleRate = useCallback(
-    async (rating: Rating) => {
+    async (rating: DeckRating) => {
       if (!card) return;
       setLastRating(rating);
       await fetch("/api/daily/review", {
@@ -152,8 +152,8 @@ export function DailySession() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Loading session</CardTitle>
-          <CardDescription>Preparing your next due cards.</CardDescription>
+          <CardTitle>Getting your session ready</CardTitle>
+          <CardDescription>Preparing your next set of cards.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <Skeleton className="h-10 w-40" />
@@ -167,15 +167,19 @@ export function DailySession() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>No cards due</CardTitle>
-          <CardDescription>Generate flashcards first or wait for the next review window.</CardDescription>
+          <CardTitle>You're caught up</CardTitle>
+          <CardDescription>No cards due right now. Great work.</CardDescription>
         </CardHeader>
         <CardContent>
           <Button onClick={loadQueue} variant="outline">
-            Refresh queue
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Refresh
           </Button>
           <Button asChild className="ml-2">
-            <a href="/course">Go to courses</a>
+            <a href="/course" className="flex items-center gap-2">
+              <BookOpen className="h-4 w-4" />
+              Courses
+            </a>
           </Button>
         </CardContent>
       </Card>
@@ -187,13 +191,14 @@ export function DailySession() {
       <Card>
         <CardHeader>
           <CardTitle>Session complete</CardTitle>
-          <CardDescription>Great job staying consistent.</CardDescription>
+          <CardDescription>Nice work. See you tomorrow.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2 text-sm text-muted-foreground">
           <p>Cards reviewed: {reviewedCount}</p>
           <p>Next due count: {dueTomorrowCount}</p>
           <Button onClick={loadQueue} variant="outline" className="mt-2">
-            Start another session
+            <RotateCcw className="mr-2 h-4 w-4" />
+            Again
           </Button>
         </CardContent>
       </Card>
@@ -205,7 +210,7 @@ export function DailySession() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Daily session</p>
-          <p className="text-sm text-muted-foreground">Review due cards with SM-2 ratings.</p>
+          <p className="text-sm text-muted-foreground">Review a few cards to stay consistent.</p>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="outline">
@@ -218,88 +223,61 @@ export function DailySession() {
       <Progress value={progressValue} />
 
       {card ? (
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={card.cardId}
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -16 }}
-            transition={{ duration: 0.18 }}
-          >
-            <Card className="mx-auto w-full max-w-2xl">
-              <CardHeader>
-                <CardTitle>{card.prompt}</CardTitle>
-                <CardDescription>
-                  {card.conceptTitle} - {card.lessonTitle ?? "Lesson"}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="relative h-48 [perspective:1200px]">
-                  <motion.div
-                    className="absolute inset-0 rounded-lg border bg-background p-4 shadow-sm [transform-style:preserve-3d]"
-                    animate={{ rotateY: showAnswer ? 180 : 0 }}
-                    transition={{ duration: 0.35 }}
-                  >
-                    <div className="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground [backface-visibility:hidden]">
-                      <Button variant="outline" onClick={() => setShowAnswer(true)} aria-label="Reveal answer">
-                        Reveal answer <Eye className="ml-2 h-4 w-4" />
-                      </Button>
-                    </div>
-                    <div className="absolute inset-0 rounded-lg bg-muted p-4 text-sm text-foreground [backface-visibility:hidden] [transform:rotateY(180deg)]">
-                      {card.answer}
-                    </div>
-                  </motion.div>
-                </div>
-                {pageNumbers.length ? (
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                    {pageNumbers.map((page) => (
-                      <Badge key={page} variant="outline">
-                        Page {page}
-                      </Badge>
-                    ))}
-                    <Button variant="ghost" size="sm" onClick={openSource} aria-label="View source">
-                      View source
-                    </Button>
-                  </div>
-                ) : (
-                  <Button variant="ghost" size="sm" onClick={openSource} aria-label="View source">
-                    View source
-                  </Button>
-                )}
-                <div className="flex flex-wrap items-center gap-2">
-                  {ratings.map((rating) => (
-                    <Button
-                      key={rating}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleRate(rating)}
-                      disabled={!showAnswer}
-                      aria-label={`Rate ${rating}`}
-                    >
-                      {rating}
-                    </Button>
-                  ))}
-                  <Button variant="ghost" size="sm" className="ml-auto" onClick={handleSkip} aria-label="Skip card">
-                    Skip <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setIndex((prev) => Math.max(prev - 1, 0))}
-                    aria-label="Previous card"
-                  >
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    Back
-                  </Button>
-                </div>
-                {lastRating && <p className="text-xs text-muted-foreground">Last rating: {lastRating}</p>}
-                <p className="text-xs text-muted-foreground">
-                  Shortcuts: Space = flip, 1-4 = rating, left/right = navigate.
-                </p>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </AnimatePresence>
+        <div className="space-y-4">
+          <FlashcardDeck
+            card={{
+              id: card.cardId,
+              prompt: card.prompt,
+              answer: card.answer,
+              conceptTitle: card.conceptTitle,
+              lessonTitle: card.lessonTitle,
+              citations: card.citations,
+            }}
+            nextCards={queue.slice(index + 1, index + 3).map((item) => ({
+              id: item.cardId,
+              prompt: item.prompt,
+              answer: item.answer,
+              conceptTitle: item.conceptTitle,
+              lessonTitle: item.lessonTitle,
+              citations: item.citations,
+            }))}
+            showAnswer={showAnswer}
+            onToggleAnswer={() => setShowAnswer((prev) => !prev)}
+            onRate={(rating) => handleRate(rating)}
+            onViewSource={openSource}
+          />
+          <div className="flex flex-wrap items-center gap-2">
+            {ratings.map((rating) => (
+              <Button
+                key={rating}
+                variant="outline"
+                size="sm"
+                onClick={() => handleRate(rating)}
+                disabled={!showAnswer}
+                aria-label={`Rate ${rating}`}
+              >
+                {rating}
+              </Button>
+            ))}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIndex((prev) => Math.max(prev - 1, 0))}
+              aria-label="Previous card"
+              className="ml-auto"
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back
+            </Button>
+            <Button variant="ghost" size="sm" onClick={handleSkip} aria-label="Skip card">
+              Skip <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
+          {lastRating && <p className="text-xs text-muted-foreground">Last rating: {lastRating}</p>}
+          <p className="text-xs text-muted-foreground">
+            Shortcuts: Space = flip, 1-4 = rating, left/right = navigate.
+          </p>
+        </div>
       ) : null}
       <SourceDrawer
         open={sourceOpen}

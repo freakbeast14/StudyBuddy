@@ -2,16 +2,21 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { AnimatePresence, motion } from "framer-motion";
+import { BookOpen, Download, FileStack, HelpCircle, ListChecks, Pencil, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { SourceDrawer } from "@/components/source/source-drawer";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toaster";
+import { cardHoverTap, staggerContainer, staggerItem } from "@/components/motion";
+import { FlashcardDeck, type DeckRating } from "@/components/daily/flashcard-deck";
 
 interface ConceptRow {
   id: string;
@@ -75,11 +80,15 @@ export function LessonDashboard({ courseId, moduleTitle, lessonTitle, concepts }
   const [editPrompt, setEditPrompt] = useState("");
   const [editAnswer, setEditAnswer] = useState("");
   const [quizSelections, setQuizSelections] = useState<Record<number, string>>({});
+  const [quizIndex, setQuizIndex] = useState(0);
   const [sourceOpen, setSourceOpen] = useState(false);
   const [sourceChunkIds, setSourceChunkIds] = useState<string[]>([]);
   const [sourceInitialPage, setSourceInitialPage] = useState<number | undefined>(undefined);
   const [cardsLoading, setCardsLoading] = useState(false);
   const [quizLoading, setQuizLoading] = useState(false);
+  const [deckIndex, setDeckIndex] = useState(0);
+  const [deckShowAnswer, setDeckShowAnswer] = useState(false);
+  const [deckLastRating, setDeckLastRating] = useState<DeckRating | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
   const [helpConcept, setHelpConcept] = useState<ConceptRow | null>(null);
   const [helpExplanation, setHelpExplanation] = useState<HelpExplanation | null>(null);
@@ -140,6 +149,17 @@ export function LessonDashboard({ courseId, moduleTitle, lessonTitle, concepts }
     loadCards();
     loadQuiz();
   }, [loadCards, loadQuiz]);
+
+  useEffect(() => {
+    setDeckIndex(0);
+    setDeckShowAnswer(false);
+    setDeckLastRating(null);
+  }, [cards]);
+
+  useEffect(() => {
+    setQuizIndex(0);
+    setQuizSelections({});
+  }, [quiz]);
 
   const handleGenerateCards = async () => {
     setIsGeneratingCards(true);
@@ -307,6 +327,55 @@ export function LessonDashboard({ courseId, moduleTitle, lessonTitle, concepts }
     setPracticeShowAnswer(false);
   };
 
+  const deckCard = cards[deckIndex];
+  const deckNextCards = cards.slice(deckIndex + 1, deckIndex + 3);
+  const deckProgress = cards.length ? ((deckIndex + 1) / cards.length) * 100 : 0;
+
+  const handleDeckRate = useCallback(
+    async (rating: DeckRating) => {
+      if (!deckCard) return;
+      await fetch("/api/daily/review", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cardId: deckCard.id, rating }),
+      });
+      setDeckLastRating(rating);
+      setDeckIndex((prev) => Math.min(prev + 1, cards.length - 1));
+      setDeckShowAnswer(false);
+    },
+    [deckCard, cards.length]
+  );
+
+  const handleDeckPrev = useCallback(() => {
+    setDeckIndex((prev) => Math.max(prev - 1, 0));
+    setDeckShowAnswer(false);
+  }, []);
+
+  useEffect(() => {
+    if (!deckCard) return;
+    const handleKey = (event: KeyboardEvent) => {
+      const tag = (event.target as HTMLElement)?.tagName?.toLowerCase();
+      if (tag === "input" || tag === "textarea") return;
+      if (event.code === "Space") {
+        event.preventDefault();
+        setDeckShowAnswer((prev) => !prev);
+      }
+      if (event.key === "1") handleDeckRate("Again");
+      if (event.key === "2") handleDeckRate("Hard");
+      if (event.key === "3") handleDeckRate("Good");
+      if (event.key === "4") handleDeckRate("Easy");
+      if (event.key === "ArrowRight") handleDeckRate("Good");
+      if (event.key === "ArrowLeft") handleDeckPrev();
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [deckCard, deckIndex, cards.length, handleDeckPrev, handleDeckRate]);
+
+  const currentQuestion = quiz?.questions?.[quizIndex];
+  const quizProgress = quiz?.questions?.length
+    ? ((quizIndex + 1) / quiz.questions.length) * 100
+    : 0;
+
   return (
     <>
       <div className="space-y-6">
@@ -314,56 +383,73 @@ export function LessonDashboard({ courseId, moduleTitle, lessonTitle, concepts }
           <div>
             <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Lesson</p>
             <h1 className="text-3xl font-semibold">{lessonTitle}</h1>
-            <p className="text-muted-foreground">Flashcards and quizzes grounded to cited chunks.</p>
+            <p className="text-muted-foreground">Review concepts, practice cards, and test yourself.</p>
           </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button onClick={handleGenerateCards} disabled={isGeneratingCards}>
-            {isGeneratingCards ? "Generating cards..." : "Generate Flashcards"}
-          </Button>
-          <Button variant="outline" onClick={handleGenerateQuiz} disabled={isGeneratingQuiz}>
-            {isGeneratingQuiz ? "Generating quiz..." : "Generate Quiz"}
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={() => {
-              toast({ title: "Export started", description: "Downloading lesson CSV.", variant: "info" });
-              window.location.href = `/api/lessons/export?courseId=${encodeURIComponent(courseId)}&lessonTitle=${encodeURIComponent(
-                lessonTitle
-              )}${moduleTitle ? `&moduleTitle=${encodeURIComponent(moduleTitle)}` : ""}`;
-            }}
-          >
-            Export flashcards
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button onClick={handleGenerateCards} disabled={isGeneratingCards}>
+              <FileStack className="mr-2 h-4 w-4" />
+              {isGeneratingCards ? "Making..." : "Cards"}
+            </Button>
+            <Button variant="outline" onClick={handleGenerateQuiz} disabled={isGeneratingQuiz}>
+              <ListChecks className="mr-2 h-4 w-4" />
+              {isGeneratingQuiz ? "Making..." : "Quiz"}
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                toast({ title: "Export started", description: "Downloading lesson CSV.", variant: "info" });
+                window.location.href = `/api/lessons/export?courseId=${encodeURIComponent(
+                  courseId
+                )}&lessonTitle=${encodeURIComponent(lessonTitle)}${
+                  moduleTitle ? `&moduleTitle=${encodeURIComponent(moduleTitle)}` : ""
+                }`;
+              }}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Export
+            </Button>
+          </div>
         </div>
-      </div>
 
       {errorMessage ? <p className="text-sm text-rose-500">{errorMessage}</p> : null}
 
       <Card>
         <CardHeader>
           <CardTitle>Concepts</CardTitle>
-          <CardDescription>{concepts.length} concepts found for this lesson.</CardDescription>
+          <CardDescription>{concepts.length} concepts to focus on today.</CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2">
-          {concepts.map((concept) => (
-            <div key={concept.id} className="rounded-lg border bg-background p-3 text-sm">
-              <div className="flex items-start justify-between gap-2">
-                <p className="font-medium">{concept.title}</p>
-                <Button variant="ghost" size="sm" onClick={() => handleHelp(concept)}>
-                  Help me understand
-                </Button>
-              </div>
-              {concept.summary ? <p className="mt-2 text-muted-foreground">{concept.summary}</p> : null}
-              {concept.pageRange ? <p className="mt-2 text-xs text-muted-foreground">Pages {concept.pageRange}</p> : null}
-            </div>
-          ))}
+        <CardContent>
+          <motion.div
+            className="grid gap-4 sm:grid-cols-2"
+            variants={staggerContainer}
+            initial="initial"
+            animate="animate"
+          >
+            {concepts.map((concept) => (
+              <motion.div key={concept.id} variants={staggerItem} {...cardHoverTap}>
+                <div className="rounded-lg border border-white/70 bg-white/80 p-3 text-sm">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="font-medium">{concept.title}</p>
+                    <Button variant="outline" size="sm" onClick={() => handleHelp(concept)} aria-label="Explain this">
+                      <HelpCircle className="mr-2 h-4 w-4" />
+                      Explain
+                    </Button>
+                  </div>
+                  {concept.summary ? <p className="mt-2 text-muted-foreground">{concept.summary}</p> : null}
+                  {concept.pageRange ? (
+                    <p className="mt-2 text-xs text-muted-foreground">Pages {concept.pageRange}</p>
+                  ) : null}
+                </div>
+              </motion.div>
+            ))}
+          </motion.div>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
           <CardTitle>Flashcards</CardTitle>
-          <CardDescription>{cards.length} cards generated for this lesson.</CardDescription>
+          <CardDescription>{cards.length} cards ready to review.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {cardsLoading ? (
@@ -375,72 +461,148 @@ export function LessonDashboard({ courseId, moduleTitle, lessonTitle, concepts }
           ) : cards.length === 0 ? (
             <p className="text-sm text-muted-foreground">No cards yet. Generate flashcards to populate this list.</p>
           ) : (
-            cards.map((card) => {
-              const pageNumbers = card.citations?.pageNumbers ?? [];
-              return (
-                <div key={card.id} className="rounded-lg border p-3">
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <div>
-                      <Badge variant="outline">{card.conceptTitle}</Badge>
-                      {card.moduleTitle ? (
-                        <Badge variant="secondary" className="ml-2">
-                          {card.moduleTitle}
-                        </Badge>
-                      ) : null}
-                    </div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleViewSource(card)}
-                        disabled={
-                          !(
-                            (Array.isArray(card.citations?.chunkIds) && card.citations?.chunkIds?.length) ||
-                            (Array.isArray(card.conceptCitationIds) && card.conceptCitationIds.length)
-                          )
-                        }
-                      >
-                        View source
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleEdit(card)}>
-                        Edit
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDelete(card.id)}>
-                        Delete
-                      </Button>
-                    </div>
+            <div className="space-y-6">
+              <div className="rounded-2xl border border-white/70 bg-white/80 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Deck mode</p>
+                    <p className="text-sm text-muted-foreground">Flip cards and rate to stay consistent.</p>
                   </div>
-                  <Separator className="my-3" />
-                  {editingCardId === card.id ? (
-                    <div className="space-y-2">
-                      <Input value={editPrompt} onChange={(e) => setEditPrompt(e.target.value)} />
-                      <Textarea value={editAnswer} onChange={(e) => setEditAnswer(e.target.value)} />
-                      <div className="flex items-center gap-2">
-                        <Button size="sm" onClick={() => handleSave(card.id)}>
-                          Save
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={() => setEditingCardId(null)}>
-                          Cancel
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <p className="font-medium">{card.prompt}</p>
-                      <p className="text-muted-foreground">{card.answer}</p>
-                    </div>
-                  )}
-                  {pageNumbers.length ? (
-                    <div className="mt-3 text-xs text-muted-foreground">
-                      Pages {pageNumbers.join(", ")} -{" "}
-                      <Link href={`/course/${courseId}?page=${pageNumbers[0]}`} className="text-primary">
-                        Open PDF
-                      </Link>
-                    </div>
-                  ) : null}
+                  <Badge variant="outline">
+                    {deckIndex + 1} / {cards.length}
+                  </Badge>
                 </div>
-              );
-            })
+                <Progress value={deckProgress} className="mt-3" />
+                <div className="mt-4">
+                  <FlashcardDeck
+                    card={
+                      deckCard
+                        ? {
+                            id: deckCard.id,
+                            prompt: deckCard.prompt,
+                            answer: deckCard.answer,
+                            conceptTitle: deckCard.conceptTitle,
+                            lessonTitle,
+                            citations: deckCard.citations,
+                          }
+                        : null
+                    }
+                    nextCards={deckNextCards.map((item) => ({
+                      id: item.id,
+                      prompt: item.prompt,
+                      answer: item.answer,
+                      conceptTitle: item.conceptTitle,
+                      lessonTitle,
+                      citations: item.citations,
+                    }))}
+                    showAnswer={deckShowAnswer}
+                    onToggleAnswer={() => setDeckShowAnswer((prev) => !prev)}
+                    onRate={(rating) => handleDeckRate(rating)}
+                    onViewSource={() => deckCard && handleViewSource(deckCard)}
+                  />
+                </div>
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                  {(["Again", "Hard", "Good", "Easy"] as DeckRating[]).map((rating) => (
+                    <Button
+                      key={rating}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDeckRate(rating)}
+                      disabled={!deckShowAnswer}
+                      aria-label={`Rate ${rating}`}
+                    >
+                      {rating}
+                    </Button>
+                  ))}
+                  <Button variant="ghost" size="sm" className="ml-auto" onClick={handleDeckPrev} aria-label="Previous card">
+                    Back
+                  </Button>
+                </div>
+                {deckLastRating ? (
+                  <p className="mt-2 text-xs text-muted-foreground">Last rating: {deckLastRating}</p>
+                ) : null}
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Shortcuts: Space = flip, 1-4 = rating, left/right = navigate.
+                </p>
+              </div>
+
+              <motion.div variants={staggerContainer} initial="initial" animate="animate" className="space-y-4">
+                {cards.map((card) => {
+                  const pageNumbers = card.citations?.pageNumbers ?? [];
+                  return (
+                    <motion.div key={card.id} variants={staggerItem} {...cardHoverTap}>
+                      <div className="rounded-lg border border-white/70 bg-white/70 p-3">
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div>
+                            <Badge variant="outline">{card.conceptTitle}</Badge>
+                            {card.moduleTitle ? (
+                              <Badge variant="secondary" className="ml-2">
+                                {card.moduleTitle}
+                              </Badge>
+                            ) : null}
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleViewSource(card)}
+                              disabled={
+                                !(
+                                  (Array.isArray(card.citations?.chunkIds) && card.citations?.chunkIds?.length) ||
+                                  (Array.isArray(card.conceptCitationIds) && card.conceptCitationIds.length)
+                                )
+                              }
+                            >
+                              <BookOpen className="mr-2 h-4 w-4" />
+                              Source
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => handleEdit(card)}>
+                              <Pencil className="mr-2 h-4 w-4" />
+                              Edit
+                            </Button>
+                            <Button variant="destructive" size="sm" onClick={() => handleDelete(card.id)}>
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </Button>
+                          </div>
+                        </div>
+                        <Separator className="my-3" />
+                        {editingCardId === card.id ? (
+                          <div className="space-y-2">
+                            <Input value={editPrompt} onChange={(e) => setEditPrompt(e.target.value)} />
+                            <Textarea value={editAnswer} onChange={(e) => setEditAnswer(e.target.value)} />
+                            <div className="flex items-center gap-2">
+                              <Button size="sm" onClick={() => handleSave(card.id)}>
+                                Save
+                              </Button>
+                              <Button size="sm" variant="outline" onClick={() => setEditingCardId(null)}>
+                                Cancel
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <p className="font-medium">{card.prompt}</p>
+                            <p className="text-muted-foreground">{card.answer}</p>
+                          </div>
+                        )}
+                        {pageNumbers.length ? (
+                          <div className="mt-3 text-xs text-muted-foreground">
+                            Pages {pageNumbers.join(", ")} -{" "}
+                            <Link
+                              href={`/course/${courseId}?page=${pageNumbers[0]}`}
+                              className="text-primary hover:underline"
+                            >
+                              Open PDF
+                            </Link>
+                          </div>
+                        ) : null}
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </motion.div>
+            </div>
           )}
         </CardContent>
       </Card>
@@ -448,7 +610,7 @@ export function LessonDashboard({ courseId, moduleTitle, lessonTitle, concepts }
       <Card>
         <CardHeader>
           <CardTitle>Lesson quiz</CardTitle>
-          <CardDescription>3-5 questions grounded in lesson citations.</CardDescription>
+          <CardDescription>Check your understanding with a short quiz.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {quizLoading ? (
@@ -460,47 +622,85 @@ export function LessonDashboard({ courseId, moduleTitle, lessonTitle, concepts }
             <p className="text-sm text-muted-foreground">No quiz yet. Generate a quiz to preview it here.</p>
           ) : (
             <div className="space-y-4">
-              <div className="rounded-lg border bg-muted/30 p-3 text-sm">
-                Score: {totalScore} / {quiz.questions.length}
-              </div>
-              {quiz.questions.map((question, index) => {
-                const selection = quizSelections[index];
-                const normalizedAnswer = resolveAnswer(question);
-                const isCorrect = selection === normalizedAnswer;
-                return (
-                  <div key={`${question.question}-${index}`} className="rounded-lg border p-3">
-                    <p className="font-medium">{question.question}</p>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="text-sm text-muted-foreground">
+                  Question {quizIndex + 1} of {quiz.questions.length}
+                </div>
+                    <div className="rounded-lg border border-white/70 bg-white/70 px-3 py-1 text-sm">
+                      Score: {totalScore} / {quiz.questions.length}
+                    </div>
+                  </div>
+              <Progress value={quizProgress} />
+              <AnimatePresence mode="wait">
+                {currentQuestion ? (
+                  <motion.div
+                    key={`${currentQuestion.question}-${quizIndex}`}
+                    className="rounded-lg border p-4"
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -12 }}
+                    transition={{ duration: 0.25 }}
+                  >
+                    <p className="font-medium">{currentQuestion.question}</p>
                     <div className="mt-3 flex flex-wrap gap-2 text-sm">
-                      {question.options.map((option) => {
+                      {currentQuestion.options.map((option) => {
+                        const selection = quizSelections[quizIndex];
+                        const normalizedAnswer = resolveAnswer(currentQuestion);
                         const isSelected = selection === option;
                         const showCorrect = selection && option === normalizedAnswer;
                         const showIncorrect = selection && isSelected && option !== normalizedAnswer;
                         return (
-                          <Button
+                          <motion.div
                             key={option}
-                            type="button"
-                            variant={showCorrect ? "default" : showIncorrect ? "destructive" : "outline"}
-                            size="sm"
-                            onClick={() =>
-                              setQuizSelections((prev) => ({
-                                ...prev,
-                                [index]: option,
-                              }))
-                            }
+                            whileHover={{ y: -2 }}
+                            whileTap={{ scale: 0.98 }}
+                            animate={showCorrect ? { scale: 1.04 } : showIncorrect ? { x: [0, -6, 6, -4, 4, 0] } : {}}
                           >
-                            {option}
-                          </Button>
+                            <Button
+                              type="button"
+                              variant={showCorrect ? "default" : showIncorrect ? "destructive" : "outline"}
+                              size="sm"
+                              onClick={() =>
+                                setQuizSelections((prev) => ({
+                                  ...prev,
+                                  [quizIndex]: option,
+                                }))
+                              }
+                              aria-label={`Select ${option}`}
+                            >
+                              {option}
+                            </Button>
+                          </motion.div>
                         );
                       })}
                     </div>
-                    {selection ? (
+                    {quizSelections[quizIndex] ? (
                       <p className="mt-3 text-xs text-muted-foreground">
-                        {isCorrect ? "Correct" : "Incorrect"} - Answer: {normalizedAnswer}
+                        {quizSelections[quizIndex] === resolveAnswer(currentQuestion) ? "Correct" : "Incorrect"} -
+                        Answer: {resolveAnswer(currentQuestion)}
                       </p>
                     ) : null}
-                  </div>
-                );
-              })}
+                    <div className="mt-4 flex flex-wrap items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setQuizIndex((prev) => Math.max(prev - 1, 0))}
+                        disabled={quizIndex === 0}
+                      >
+                        Back
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setQuizIndex((prev) => Math.min(prev + 1, quiz.questions.length - 1))}
+                        disabled={quizIndex >= quiz.questions.length - 1}
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  </motion.div>
+                ) : null}
+              </AnimatePresence>
             </div>
           )}
         </CardContent>
@@ -515,9 +715,9 @@ export function LessonDashboard({ courseId, moduleTitle, lessonTitle, concepts }
       <Sheet open={helpOpen} onOpenChange={setHelpOpen}>
         <SheetContent className="max-w-4xl">
           <SheetHeader>
-            <SheetTitle>Help me understand</SheetTitle>
+            <SheetTitle>Explain it to me</SheetTitle>
             <SheetDescription>
-              {helpConcept?.title ?? "Concept"} - scaffolded explanation and practice.
+              {helpConcept?.title ?? "Concept"} - a guided explanation and quick practice.
             </SheetDescription>
           </SheetHeader>
           <div className="space-y-4 px-6 py-4 overflow-auto">
@@ -534,7 +734,7 @@ export function LessonDashboard({ courseId, moduleTitle, lessonTitle, concepts }
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-lg">Explanation</CardTitle>
-                    <CardDescription>Bullets, example, and misconception.</CardDescription>
+                    <CardDescription>Key points, an example, and a common mistake.</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3 text-sm text-muted-foreground">
                     <ul className="list-disc space-y-1 pl-5">
@@ -575,7 +775,7 @@ export function LessonDashboard({ courseId, moduleTitle, lessonTitle, concepts }
                       <p className="text-sm text-muted-foreground">No scaffold cards yet.</p>
                     ) : (
                       helpCards.map((card) => (
-                        <div key={card.id} className="rounded-lg border p-3 text-sm">
+                        <div key={card.id} className="rounded-lg border border-white/70 bg-white/70 p-3 text-sm">
                           <p className="font-medium">{card.prompt}</p>
                           <p className="text-muted-foreground">{card.answer}</p>
                           <div className="mt-2 flex flex-wrap gap-2">
@@ -599,7 +799,7 @@ export function LessonDashboard({ courseId, moduleTitle, lessonTitle, concepts }
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-lg">Practice now</CardTitle>
-                    <CardDescription>Review scaffold cards and record ratings.</CardDescription>
+                    <CardDescription>Review the cards and rate your confidence.</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     {helpCards.length === 0 ? (
@@ -609,7 +809,7 @@ export function LessonDashboard({ courseId, moduleTitle, lessonTitle, concepts }
                         <div className="text-sm text-muted-foreground">
                           Card {practiceIndex + 1} of {helpCards.length}
                         </div>
-                        <div className="rounded-lg border p-3">
+                        <div className="rounded-lg border border-white/70 bg-white/70 p-3">
                           <p className="font-medium">{helpCards[practiceIndex]?.prompt}</p>
                           {practiceShowAnswer ? (
                             <p className="mt-2 text-muted-foreground">{helpCards[practiceIndex]?.answer}</p>

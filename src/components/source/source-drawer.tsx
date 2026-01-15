@@ -54,7 +54,7 @@ export function SourceDrawer({ open, onOpenChange, chunkIds, initialPage }: Sour
   const pageNumbers = useMemo(() => Array.from(new Set(chunks.map((chunk) => chunk.pageNumber))), [chunks]);
   const citationText = useMemo(() => {
     const pages = pageNumbers.join(", ");
-    return `chunks: ${chunkIds.join(", ")} | pages: ${pages}`;
+    return `sources: ${chunkIds.join(", ")} | pages: ${pages}`;
   }, [chunkIds, pageNumbers]);
 
   const handleCopy = async () => {
@@ -65,15 +65,15 @@ export function SourceDrawer({ open, onOpenChange, chunkIds, initialPage }: Sour
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="max-w-6xl">
         <SheetHeader>
-          <SheetTitle>Source citations</SheetTitle>
-          <SheetDescription>Review the cited chunks and jump to the exact page in the PDF.</SheetDescription>
+          <SheetTitle>Sources</SheetTitle>
+          <SheetDescription>Jump to the exact pages behind each answer.</SheetDescription>
         </SheetHeader>
         <div className="grid h-full grid-rows-[auto_1fr] gap-4 px-6 py-4 lg:grid-cols-[1.4fr_1fr] lg:grid-rows-1">
           <div className="flex flex-col gap-3">
             <div className="flex flex-wrap items-center gap-2">
               <Button variant="outline" size="sm" onClick={handleCopy} disabled={!chunks.length}>
                 <Copy className="mr-2 h-4 w-4" />
-                Copy citation
+                Copy sources
               </Button>
               {pageNumbers.map((page) => (
                 <Button key={page} variant="ghost" size="sm" onClick={() => setCurrentPage(page)}>
@@ -81,7 +81,7 @@ export function SourceDrawer({ open, onOpenChange, chunkIds, initialPage }: Sour
                 </Button>
               ))}
             </div>
-            <div className="flex-1 overflow-auto rounded-lg border bg-muted/30 p-3">
+            <div className="flex-1 overflow-auto rounded-2xl border border-white/70 bg-white/80 p-3">
               {loading || !documentId ? (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -102,22 +102,24 @@ export function SourceDrawer({ open, onOpenChange, chunkIds, initialPage }: Sour
                 </Document>
               )}
               {numPages ? (
-                <p className="mt-2 text-xs text-muted-foreground">Page {currentPage ?? 1} of {numPages}</p>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Page {currentPage ?? 1} of {numPages}
+                </p>
               ) : null}
             </div>
           </div>
           <div className="flex flex-col gap-3 overflow-auto">
             {chunks.map((chunk) => (
-              <Card key={chunk.id} className="border border-emerald-500/20 bg-emerald-500/5 p-3 text-sm">
+              <Card key={chunk.id} className="border border-primary/20 bg-primary/5 p-3 text-sm">
                 <div className="flex items-center justify-between">
                   <Badge variant="outline">Page {chunk.pageNumber}</Badge>
-                  <Badge variant="secondary">Chunk {chunk.chunkIndex}</Badge>
+                  <Badge variant="secondary">Snippet {chunk.chunkIndex + 1}</Badge>
                 </div>
                 <p className="mt-3 text-muted-foreground">{chunk.content}</p>
               </Card>
             ))}
             {!chunks.length && !loading ? (
-              <p className="text-sm text-muted-foreground">No chunks found for this citation.</p>
+              <p className="text-sm text-muted-foreground">No sources found for this selection.</p>
             ) : null}
           </div>
         </div>

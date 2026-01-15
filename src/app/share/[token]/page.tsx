@@ -16,7 +16,7 @@ export default async function SharePage({ params }: { params: { token: string } 
     return (
       <div className="space-y-4">
         <h1 className="text-2xl font-semibold">Share link not found</h1>
-        <p className="text-muted-foreground">This share link is invalid or revoked.</p>
+        <p className="text-muted-foreground">This share link is invalid or no longer active.</p>
       </div>
     );
   }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toaster";
 
@@ -39,7 +40,8 @@ export function ShareLinkButton({ courseId }: ShareLinkButtonProps) {
   return (
     <div className="flex flex-col items-end gap-2">
       <Button variant="outline" onClick={handleGenerate} disabled={loading}>
-        {loading ? "Generating..." : "Create share link"}
+        <Share2 className="mr-2 h-4 w-4" />
+        {loading ? "Creating..." : "Share"}
       </Button>
       {shareUrl ? <p className="text-xs text-muted-foreground">Copied: {shareUrl}</p> : null}
       {errorMessage ? <p className="text-xs text-rose-500">{errorMessage}</p> : null}

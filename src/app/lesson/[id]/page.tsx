@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import { BookOpen } from "lucide-react";
 import Link from "next/link";
 import { Breadcrumbs } from "@/components/layout/breadcrumbs";
 import { LessonDashboard } from "@/components/lesson/lesson-dashboard";
@@ -27,10 +28,13 @@ export default async function LessonPage({ params }: { params: { id: string } })
         <div>
           <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Lesson</p>
           <h1 className="text-3xl font-semibold">{lessonTitle}</h1>
-          <p className="text-muted-foreground">Generate the course outline to populate this lesson.</p>
+          <p className="text-muted-foreground">Generate your outline to unlock this lesson.</p>
         </div>
         <Button asChild>
-          <Link href="/course">Go to courses</Link>
+          <Link href="/course" className="flex items-center gap-2">
+            <BookOpen className="h-4 w-4" />
+            Courses
+          </Link>
         </Button>
       </div>
     );

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, BookOpen, Brain, FileText, Timer } from "lucide-react";
+import { ArrowRight, BookOpen, Brain, FileText, PlayCircle, Sparkles, UploadCloud } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -7,54 +7,74 @@ import { Progress } from "@/components/ui/progress";
 
 const steps = [
   {
-    title: "Upload & ingest",
-    description: "Store the PDF locally, parse text with page numbers, enqueue PROCESS_DOCUMENT in pg-boss.",
+    title: "Upload your material",
+    description: "Drop a PDF and let StudyBuddy read it into clean, searchable notes.",
     href: "/upload",
     icon: FileText,
+    cta: "Upload a PDF",
   },
   {
-    title: "Outline & concepts",
-    description: "Generate modules -> lessons -> concepts and keep citations tied to chunk + page ids.",
+    title: "Auto-outline lessons",
+    description: "See modules, lessons, and key concepts organized for you.",
     href: "/course",
     icon: BookOpen,
+    cta: "Open your outline",
   },
   {
-    title: "Flashcards & quizzes",
-    description: "Use RAG over pgvector chunks to draft cards and short quizzes per concept.",
+    title: "Create smart practice",
+    description: "Generate flashcards and quick quizzes grounded in your PDF.",
     href: "/course",
     icon: Brain,
+    cta: "Build practice",
   },
   {
-    title: "10-min daily session",
-    description: "SM-2 scheduling drives due cards plus a new concept and a mini quiz.",
+    title: "Daily 10-minute flow",
+    description: "Short sessions keep you on track with spaced repetition.",
     href: "/daily",
-    icon: Timer,
+    icon: PlayCircle,
+    cta: "Start a session",
   },
 ];
 
 export default function Home() {
   return (
     <div className="space-y-10">
-      <div className="flex flex-col gap-4">
-        <Badge variant="secondary" className="w-fit">
-          Local-first - Postgres + OpenAI
-        </Badge>
-        <h1 className="text-3xl font-semibold leading-tight text-foreground sm:text-4xl">
-          StudyBuddy AI scaffolding is ready. Start by uploading a PDF to kick off ingestion.
-        </h1>
-        <p className="max-w-2xl text-lg text-muted-foreground">
-          This workspace is wired for App Router + Tailwind + shadcn/ui, Drizzle ORM with pgvector, pg-boss jobs, and
-          local filesystem storage at <code className="rounded bg-muted px-2 py-1 font-mono text-sm">./data/uploads</code>.
-        </p>
-        <div className="flex flex-wrap items-center gap-3">
-          <Button asChild>
-            <Link href="/upload" className="flex items-center gap-2">
-              Start with an upload <ArrowRight className="h-4 w-4" />
-            </Link>
-          </Button>
-          <Button variant="outline" asChild>
-            <Link href="/daily">Run the 10-min session</Link>
-          </Button>
+      <div className="rounded-3xl border border-white/60 bg-white/70 p-8 shadow-[0_30px_80px_-60px_rgba(15,23,42,0.5)] backdrop-blur sm:p-10">
+        <div className="flex flex-col gap-5">
+          <Badge variant="secondary" className="w-fit">
+            Made for focused study
+          </Badge>
+          <h1 className="text-3xl font-semibold leading-tight text-foreground sm:text-4xl">
+            Turn your PDFs into a clear study plan and daily practice.
+          </h1>
+          <p className="max-w-2xl text-lg text-muted-foreground">
+            Upload class notes or textbooks, then review lessons, flashcards, and quizzes built from the exact pages you
+            uploaded.
+          </p>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button asChild>
+              <Link href="/upload" className="flex items-center gap-2">
+                <UploadCloud className="h-4 w-4" />
+                Upload
+              </Link>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link href="/daily" className="flex items-center gap-2">
+                <PlayCircle className="h-4 w-4" />
+                Study
+              </Link>
+            </Button>
+          </div>
+          <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2 rounded-full border border-white/70 bg-white/70 px-3 py-1">
+              <Sparkles className="h-4 w-4 text-primary" />
+              Built from your material
+            </div>
+            <div className="flex items-center gap-2 rounded-full border border-white/70 bg-white/70 px-3 py-1">
+              <Brain className="h-4 w-4 text-primary" />
+              Spaced repetition included
+            </div>
+          </div>
         </div>
       </div>
 
@@ -62,7 +82,7 @@ export default function Home() {
         {steps.map((step) => (
           <Card key={step.title} className="h-full">
             <CardHeader className="flex flex-row items-center gap-3 space-y-0">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
                 <step.icon className="h-5 w-5" />
               </div>
               <div>
@@ -73,7 +93,7 @@ export default function Home() {
             <CardContent>
               <Button variant="ghost" asChild className="px-0 text-sm">
                 <Link href={step.href} className="inline-flex items-center gap-2 text-primary">
-                  Open screen <ArrowRight className="h-4 w-4" />
+                  {step.cta} <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
             </CardContent>
@@ -83,24 +103,24 @@ export default function Home() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Pipeline status</CardTitle>
-          <CardDescription>{`Ingestion -> chunking -> embeddings -> outline/cards/quizzes.`}</CardDescription>
+          <CardTitle>Study momentum</CardTitle>
+          <CardDescription>Track your progress from upload to daily review.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-3">
           <div>
-            <p className="text-sm font-medium">Ingestion readiness</p>
-            <Progress value={80} className="mt-2" />
-            <p className="mt-2 text-xs text-muted-foreground">pg-boss worker & Drizzle schemas are scaffolded.</p>
+            <p className="text-sm font-medium">Materials ready</p>
+            <Progress value={75} className="mt-2" />
+            <p className="mt-2 text-xs text-muted-foreground">Upload a PDF to start building lessons.</p>
           </div>
           <div>
-            <p className="text-sm font-medium">RAG wiring</p>
-            <Progress value={65} className="mt-2" />
-            <p className="mt-2 text-xs text-muted-foreground">Vector column + index defined; add OpenAI calls next.</p>
+            <p className="text-sm font-medium">Lessons & cards</p>
+            <Progress value={55} className="mt-2" />
+            <p className="mt-2 text-xs text-muted-foreground">Generate an outline to unlock flashcards.</p>
           </div>
           <div>
-            <p className="text-sm font-medium">SM-2 logic</p>
-            <Progress value={40} className="mt-2" />
-            <p className="mt-2 text-xs text-muted-foreground">Core state modeled; tests ready for scheduling rules.</p>
+            <p className="text-sm font-medium">Daily practice</p>
+            <Progress value={35} className="mt-2" />
+            <p className="mt-2 text-xs text-muted-foreground">Review a few cards each day to stay consistent.</p>
           </div>
         </CardContent>
       </Card>

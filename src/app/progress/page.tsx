@@ -6,6 +6,7 @@ import { db } from "@/db/client";
 import { srsState } from "@/db/schema";
 import { getOrCreateDefaultUserId } from "@/lib/users";
 import Link from "next/link";
+import { PlayCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export const metadata = {
@@ -75,8 +76,8 @@ async function ProgressPageContent({ userIdPromise }: { userIdPromise: Promise<s
     <div className="space-y-6">
       <div>
         <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Progress</p>
-        <h1 className="text-3xl font-semibold">Mastery & due forecast</h1>
-        <p className="text-muted-foreground">Track SM-2 metrics per concept and upcoming reviews.</p>
+        <h1 className="text-3xl font-semibold">Your learning momentum</h1>
+        <p className="text-muted-foreground">See what is due today and how your reviews are building up.</p>
       </div>
 
       {hasProgress ? (
@@ -85,11 +86,14 @@ async function ProgressPageContent({ userIdPromise }: { userIdPromise: Promise<s
         <Card>
           <CardHeader>
             <CardTitle>No progress yet</CardTitle>
-            <CardDescription>Review cards to start tracking progress.</CardDescription>
+            <CardDescription>Complete your first session to see trends here.</CardDescription>
           </CardHeader>
           <CardContent>
             <Button asChild>
-              <Link href="/daily">Start today's session</Link>
+              <Link href="/daily" className="flex items-center gap-2">
+                <PlayCircle className="h-4 w-4" />
+                Study
+              </Link>
             </Button>
           </CardContent>
         </Card>
@@ -99,29 +103,23 @@ async function ProgressPageContent({ userIdPromise }: { userIdPromise: Promise<s
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Due today</CardTitle>
-            <CardDescription>Cards scheduled for review today.</CardDescription>
+            <CardDescription>Cards ready for review today.</CardDescription>
           </CardHeader>
-          <CardContent className="text-2xl font-semibold">
-            {dueToday[0]?.count ?? 0}
-          </CardContent>
+          <CardContent className="text-2xl font-semibold">{dueToday[0]?.count ?? 0}</CardContent>
         </Card>
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Due tomorrow</CardTitle>
-            <CardDescription>Upcoming cards due in the next day.</CardDescription>
+            <CardDescription>Cards coming up tomorrow.</CardDescription>
           </CardHeader>
-          <CardContent className="text-2xl font-semibold">
-            {dueTomorrow[0]?.count ?? 0}
-          </CardContent>
+          <CardContent className="text-2xl font-semibold">{dueTomorrow[0]?.count ?? 0}</CardContent>
         </Card>
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Learned cards</CardTitle>
-            <CardDescription>Cards reviewed at least once.</CardDescription>
+            <CardDescription>Cards you have reviewed at least once.</CardDescription>
           </CardHeader>
-          <CardContent className="text-2xl font-semibold">
-            {learnedCount[0]?.count ?? 0}
-          </CardContent>
+          <CardContent className="text-2xl font-semibold">{learnedCount[0]?.count ?? 0}</CardContent>
         </Card>
       </div>
     </div>

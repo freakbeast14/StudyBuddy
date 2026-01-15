@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { and, eq, sql } from "drizzle-orm";
+import { FileStack, PlayCircle, Sparkles } from "lucide-react";
 import { Breadcrumbs } from "@/components/layout/breadcrumbs";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+import { OutlineTree } from "@/components/course/outline-tree";
 import { GenerateOutlineButton } from "@/components/course/generate-outline-button";
 import { ShareLinkButton } from "@/components/course/share-link-button";
 import { CourseExportButton } from "@/components/course/export-button";
@@ -76,11 +77,11 @@ export default async function CoursePage({ params }: { params: { id: string } })
   const hasReviews = Number(reviewCount[0]?.count ?? 0) > 0;
   const firstLesson = conceptRows[0]?.lessonTitle;
   const primaryCta = !hasOutline
-    ? { label: "Generate outline", href: null }
+    ? { label: "Outline", href: null }
     : !hasCards && firstLesson
-      ? { label: "Generate flashcards", href: `/lesson/${encodeURIComponent(firstLesson)}` }
+      ? { label: "Cards", href: `/lesson/${encodeURIComponent(firstLesson)}` }
       : !hasReviews
-        ? { label: "Start today's session", href: "/daily" }
+        ? { label: "Study", href: "/daily" }
         : null;
 
   const outlineMap = new Map<string, Map<string, OutlineLesson>>();
@@ -114,9 +115,7 @@ export default async function CoursePage({ params }: { params: { id: string } })
         <div>
           <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Course</p>
           <h1 className="text-3xl font-semibold">{courseTitle}</h1>
-          <p className="text-muted-foreground">
-            Outline is generated from pgvector-backed retrieval over your uploaded PDF chunks.
-          </p>
+          <p className="text-muted-foreground">Your outline and practice materials come directly from your PDFs.</p>
         </div>
         {isValidUuid ? (
           <div className="flex flex-wrap items-center gap-2">
@@ -125,41 +124,46 @@ export default async function CoursePage({ params }: { params: { id: string } })
             <ShareLinkButton courseId={courseId} />
           </div>
         ) : (
-          <Badge variant="outline">Invalid course id</Badge>
+          <Badge variant="outline">Missing course</Badge>
         )}
       </div>
 
       {!isValidUuid ? (
         <Card>
           <CardHeader>
-            <CardTitle>Invalid course id</CardTitle>
-            <CardDescription>Use a valid UUID in the URL to load and generate outlines.</CardDescription>
+            <CardTitle>Course not found</CardTitle>
+            <CardDescription>This link does not match a course in your workspace.</CardDescription>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">
-            Example: /course/123e4567-e89b-12d3-a456-426614174000
+            Pick a course from the sidebar or upload a new PDF to create one.
           </CardContent>
         </Card>
       ) : (
-        <Card className="border border-dashed bg-muted/30">
-          <CardHeader>
-            <CardTitle>Setup checklist</CardTitle>
-            <CardDescription>Complete these steps to unlock the full study flow.</CardDescription>
+        <Card className="border border-dashed bg-white/70">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Setup checklist</CardTitle>
+            <CardDescription>Quick steps to unlock the study flow.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3 text-sm">
+          <CardContent className="grid gap-2 text-sm sm:grid-cols-2">
             <ChecklistItem label="PDF uploaded" done={readyDocs > 0} />
-            <ChecklistItem label="Outline generated" done={hasOutline} />
-            <ChecklistItem label="Cards generated" done={hasCards} />
-            <ChecklistItem label="First session completed" done={hasReviews} />
+            <ChecklistItem label="Outline ready" done={hasOutline} />
+            <ChecklistItem label="Cards ready" done={hasCards} />
+            <ChecklistItem label="First session" done={hasReviews} />
+          </CardContent>
+          <CardContent className="pt-2">
             {primaryCta ? (
-              <div className="pt-2">
-                {primaryCta.href ? (
-                  <Button asChild>
-                    <Link href={primaryCta.href}>{primaryCta.label}</Link>
-                  </Button>
-                ) : (
-                  <GenerateOutlineButton courseId={courseId} />
-                )}
-              </div>
+              primaryCta.href ? (
+                <Button asChild>
+                  <Link href={primaryCta.href} className="flex items-center gap-2">
+                    {primaryCta.label === "Cards" ? <FileStack className="h-4 w-4" /> : null}
+                    {primaryCta.label === "Study" ? <PlayCircle className="h-4 w-4" /> : null}
+                    {primaryCta.label === "Outline" ? <Sparkles className="h-4 w-4" /> : null}
+                    {primaryCta.label}
+                  </Link>
+                </Button>
+              ) : (
+                <GenerateOutlineButton courseId={courseId} />
+              )
             ) : (
               <p className="text-xs text-muted-foreground">You're all set for today.</p>
             )}
@@ -171,50 +175,15 @@ export default async function CoursePage({ params }: { params: { id: string } })
         <Card>
           <CardHeader>
             <CardTitle>No outline yet</CardTitle>
-            <CardDescription>Upload a PDF, then generate an outline to see modules, lessons, and concepts.</CardDescription>
+            <CardDescription>Upload a PDF, then generate your outline to see modules and lessons.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 text-sm text-muted-foreground">
-            <p>Click Generate Outline to build concepts with citations.</p>
+            <p>Click Generate Outline to build your study map.</p>
             <GenerateOutlineButton courseId={courseId} />
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-4">
-          {outline.map((module) => (
-            <Card key={module.moduleTitle}>
-              <CardHeader>
-                <CardTitle>{module.moduleTitle}</CardTitle>
-                <CardDescription>Lessons and concepts grounded to chunk/page citations.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {module.lessons.map((lesson) => (
-                  <div key={lesson.lessonTitle} className="rounded-lg border bg-background px-4 py-3">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <Link href={`/lesson/${encodeURIComponent(lesson.lessonTitle)}`} className="font-medium">
-                        {lesson.lessonTitle}
-                      </Link>
-                      <Badge variant="outline">{lesson.concepts.length} concepts</Badge>
-                    </div>
-                    <Separator className="my-3" />
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      {lesson.concepts.map((concept) => (
-                        <div key={concept.id} className="rounded-md bg-muted/60 p-3 text-sm">
-                          <p className="font-semibold text-foreground">{concept.title}</p>
-                          {concept.summary ? (
-                            <p className="mt-1 text-xs text-muted-foreground">{concept.summary}</p>
-                          ) : null}
-                          {concept.pageRange ? (
-                            <p className="mt-2 text-xs text-muted-foreground">Pages {concept.pageRange}</p>
-                          ) : null}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <OutlineTree outline={outline} />
       )}
     </div>
   );
@@ -222,9 +191,9 @@ export default async function CoursePage({ params }: { params: { id: string } })
 
 function ChecklistItem({ label, done }: { label: string; done: boolean }) {
   return (
-    <div className="flex items-center justify-between rounded-md border bg-background px-3 py-2">
+    <div className="flex items-center justify-between gap-2 rounded-md border border-white/70 bg-white/80 px-3 py-2 text-xs">
       <span className={done ? "text-foreground" : "text-muted-foreground"}>{label}</span>
-      <Badge variant={done ? "secondary" : "outline"}>{done ? "Done" : "Pending"}</Badge>
+      <Badge variant={done ? "secondary" : "outline"}>{done ? "Done" : "Todo"}</Badge>
     </div>
   );
 }

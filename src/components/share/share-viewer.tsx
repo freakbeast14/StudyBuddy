@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { BookOpen } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -67,7 +68,7 @@ export function ShareViewer({ courseTitle, concepts, cards }: ShareViewerProps) 
         <div>
           <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Shared course</p>
           <h1 className="text-3xl font-semibold">{courseTitle}</h1>
-          <p className="text-muted-foreground">Read-only outline and sample flashcards.</p>
+          <p className="text-muted-foreground">A read-only preview of the outline and flashcards.</p>
         </div>
 
         <div className="space-y-4">
@@ -75,11 +76,11 @@ export function ShareViewer({ courseTitle, concepts, cards }: ShareViewerProps) 
             <Card key={module.moduleTitle}>
               <CardHeader>
                 <CardTitle>{module.moduleTitle}</CardTitle>
-                <CardDescription>Lessons and cited concepts.</CardDescription>
+                <CardDescription>Lessons and key concepts.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 {module.lessons.map((lesson) => (
-                  <div key={lesson.lessonTitle} className="rounded-lg border bg-background px-4 py-3">
+                  <div key={lesson.lessonTitle} className="rounded-lg border border-white/70 bg-white/80 px-4 py-3">
                     <div className="flex items-center justify-between">
                       <p className="font-medium">{lesson.lessonTitle}</p>
                       <Badge variant="outline">{lesson.concepts.length} concepts</Badge>
@@ -87,7 +88,7 @@ export function ShareViewer({ courseTitle, concepts, cards }: ShareViewerProps) 
                     <Separator className="my-3" />
                     <div className="grid gap-2 sm:grid-cols-2">
                       {lesson.concepts.map((concept) => (
-                        <div key={concept.id} className="rounded-md bg-muted/60 p-3 text-sm">
+                        <div key={concept.id} className="rounded-md bg-muted/50 p-3 text-sm">
                           <p className="font-semibold text-foreground">{concept.title}</p>
                           {concept.summary ? (
                             <p className="mt-1 text-xs text-muted-foreground">{concept.summary}</p>
@@ -108,7 +109,7 @@ export function ShareViewer({ courseTitle, concepts, cards }: ShareViewerProps) 
         <Card>
           <CardHeader>
             <CardTitle>Sample cards</CardTitle>
-            <CardDescription>Read-only preview of a few flashcards.</CardDescription>
+            <CardDescription>Preview a few flashcards from this course.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {cards.length === 0 ? (
@@ -118,7 +119,7 @@ export function ShareViewer({ courseTitle, concepts, cards }: ShareViewerProps) 
                 const chunkIds = card.citations?.chunkIds ?? [];
                 const pageNumbers = card.citations?.pageNumbers ?? [];
                 return (
-                  <div key={card.id} className="rounded-lg border p-3 text-sm">
+                  <div key={card.id} className="rounded-lg border border-white/70 bg-white/80 p-3 text-sm">
                     <p className="font-medium">{card.prompt}</p>
                     <p className="mt-2 text-muted-foreground">{card.answer}</p>
                     <div className="mt-3 flex flex-wrap gap-2">
@@ -128,12 +129,13 @@ export function ShareViewer({ courseTitle, concepts, cards }: ShareViewerProps) 
                         </Badge>
                       ))}
                       <Button
-                        variant="ghost"
+                        variant="outline"
                         size="sm"
                         onClick={() => openSource(chunkIds, pageNumbers[0])}
                         disabled={!chunkIds.length}
                       >
-                        View source
+                        <BookOpen className="mr-2 h-4 w-4" />
+                        Source
                       </Button>
                     </div>
                   </div>

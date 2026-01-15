@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toaster";
 
@@ -38,7 +39,8 @@ export function GenerateOutlineButton({ courseId }: GenerateOutlineButtonProps) 
   return (
     <div className="flex flex-col items-end gap-2">
       <Button onClick={handleClick} disabled={isLoading}>
-        {isLoading ? "Generating..." : "Generate Outline"}
+        <Sparkles className="mr-2 h-4 w-4" />
+        {isLoading ? "Building..." : "Outline"}
       </Button>
       {errorMessage ? <p className="text-xs text-rose-500">{errorMessage}</p> : null}
     </div>

@@ -3,18 +3,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 
 const steps: { title: string; description: string; icon: LucideIcon }[] = [
   {
-    title: "Extract PDF text",
-    description: "Parse pages with page numbers to keep citations intact before chunking.",
+    title: "We read your pages",
+    description: "Each page is processed so we can link every answer back to its source.",
     icon: Workflow,
   },
   {
-    title: "Chunk + embed",
-    description: "Overlap-aware chunks ? OpenAI embeddings ? pgvector stored in Postgres.",
+    title: "We organize the ideas",
+    description: "Lessons and concepts appear in a clear outline, ready to explore.",
     icon: Sparkles,
   },
   {
-    title: "Generate outline/cards",
-    description: "RAG over chunks to draft modules, lessons, concepts, cards, and quizzes.",
+    title: "We prepare practice",
+    description: "Flashcards and quizzes are generated so you can start reviewing fast.",
     icon: CheckCircle2,
   },
 ];
@@ -34,7 +34,7 @@ export function IngestionSteps() {
             </div>
           </CardHeader>
           <CardContent className="text-xs text-muted-foreground">
-            Outputs stay grounded with page numbers and chunk ids for every asset.
+            Sources stay visible, so every card and quiz points back to the PDF.
           </CardContent>
         </Card>
       ))}

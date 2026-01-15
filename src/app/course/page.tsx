@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { desc } from "drizzle-orm";
+import { BookOpen, UploadCloud } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,10 +28,13 @@ export default async function CoursesPage() {
         <div>
           <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Courses</p>
           <h1 className="text-3xl font-semibold">Your courses</h1>
-          <p className="text-muted-foreground">Pick a course to view its outline or upload new documents.</p>
+          <p className="text-muted-foreground">Pick a course to keep learning materials organized.</p>
         </div>
         <Button asChild>
-          <Link href="/upload">Upload a PDF</Link>
+          <Link href="/upload" className="flex items-center gap-2">
+            <UploadCloud className="h-4 w-4" />
+            Upload
+          </Link>
         </Button>
       </div>
 
@@ -38,12 +42,15 @@ export default async function CoursesPage() {
         <Card>
           <CardHeader>
             <CardTitle>No courses yet</CardTitle>
-            <CardDescription>Create a course in the upload screen to get started.</CardDescription>
+            <CardDescription>Start by uploading your first PDF.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 text-sm text-muted-foreground">
-            <p>Go to /upload and create a course before uploading a PDF.</p>
+            <p>Create a course to keep each class or subject organized.</p>
             <Button asChild>
-              <Link href="/upload">Upload a PDF</Link>
+              <Link href="/upload" className="flex items-center gap-2">
+                <UploadCloud className="h-4 w-4" />
+                Upload
+              </Link>
             </Button>
           </CardContent>
         </Card>
@@ -53,15 +60,18 @@ export default async function CoursesPage() {
             <Card key={course.id} className="h-full">
               <CardHeader>
                 <CardTitle>{course.title}</CardTitle>
-                <CardDescription>{course.description ?? "Outline ready to generate from documents."}</CardDescription>
+                <CardDescription>{course.description ?? "Ready to turn your notes into a study plan."}</CardDescription>
               </CardHeader>
               <CardContent className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
                 <span>{new Date(course.createdAt).toLocaleDateString()}</span>
-                <Badge variant="outline">Course</Badge>
+                <Badge variant="outline">Active</Badge>
               </CardContent>
               <CardContent>
-                <Button asChild variant="ghost" className="px-0">
-                  <Link href={`/course/${course.id}`}>Open course</Link>
+                <Button asChild variant="outline" size="sm">
+                  <Link href={`/course/${course.id}`} className="flex items-center gap-2">
+                    <BookOpen className="h-4 w-4" />
+                    Open
+                  </Link>
                 </Button>
               </CardContent>
             </Card>

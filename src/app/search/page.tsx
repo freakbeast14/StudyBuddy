@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { BookOpen, MessageCircle, Search as SearchIcon, UploadCloud } from "lucide-react";
+import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { SourceDrawer } from "@/components/source/source-drawer";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toaster";
+import { cardHoverTap, staggerContainer, staggerItem } from "@/components/motion";
 
 interface CourseRow {
   id: string;
@@ -128,22 +131,25 @@ export default function SearchPage() {
     <>
       <div className="space-y-6">
         <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Semantic search</p>
-          <h1 className="text-3xl font-semibold">Search your course</h1>
-          <p className="text-muted-foreground">Retrieve grounded chunks and optionally ask a question with citations.</p>
+          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Search</p>
+          <h1 className="text-3xl font-semibold">Find answers in your course</h1>
+          <p className="text-muted-foreground">Search your materials or ask a question with sources.</p>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Search</CardTitle>
-            <CardDescription>Find the most relevant chunks by semantic similarity.</CardDescription>
+            <CardTitle>Search your materials</CardTitle>
+            <CardDescription>Find the most relevant pages for your query.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {courses.length === 0 ? (
               <div className="space-y-2 text-sm text-muted-foreground">
-                <p>No courses yet. Upload a PDF to begin searching.</p>
+                <p>No courses yet. Upload a PDF to start searching.</p>
                 <Button asChild>
-                  <a href="/upload">Upload a PDF</a>
+                  <a href="/upload" className="flex items-center gap-2">
+                    <UploadCloud className="h-4 w-4" />
+                    Upload
+                  </a>
                 </Button>
               </div>
             ) : (
@@ -151,7 +157,7 @@ export default function SearchPage() {
                 <select
                   value={courseId}
                   onChange={(event) => setCourseId(event.target.value)}
-                  className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                  className="h-11 rounded-md border border-input/70 bg-white/80 px-3 text-sm shadow-sm transition-all hover:border-primary/40"
                 >
                   <option value="" disabled>
                     {courses.length ? "Select course" : "No courses yet"}
@@ -165,9 +171,10 @@ export default function SearchPage() {
                 <Input
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Search for a concept or keyword"
+                  placeholder="Search a concept, term, or topic"
                 />
                 <Button onClick={handleSearch} disabled={loadingSearch}>
+                  <SearchIcon className="mr-2 h-4 w-4" />
                   {loadingSearch ? "Searching..." : "Search"}
                 </Button>
               </div>
@@ -193,57 +200,66 @@ export default function SearchPage() {
             <Card>
               <CardHeader>
                 <CardTitle>No results yet</CardTitle>
-                <CardDescription>Try a broader query or upload more documents.</CardDescription>
+                <CardDescription>Try a broader query or add more material.</CardDescription>
               </CardHeader>
               <CardContent>
                 <Button asChild variant="outline">
-                  <a href="/upload">Upload another PDF</a>
+                  <a href="/upload" className="flex items-center gap-2">
+                    <UploadCloud className="h-4 w-4" />
+                    Upload
+                  </a>
                 </Button>
               </CardContent>
             </Card>
           ) : (
-            results.map((result) => (
-              <Card key={result.chunkId}>
-                <CardHeader>
-                  <CardTitle className="text-lg">Page {result.pageNumber}</CardTitle>
-                  <CardDescription>Score {result.score.toFixed(3)}</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3 text-sm text-muted-foreground">
-                  <p>{result.snippet}...</p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => openSource([result.chunkId], result.pageNumber)}
-                  >
-                    View source
-                  </Button>
-                </CardContent>
-              </Card>
-            ))
+            <motion.div variants={staggerContainer} initial="initial" animate="animate" className="space-y-3">
+              {results.map((result) => (
+                <motion.div key={result.chunkId} variants={staggerItem} {...cardHoverTap}>
+                  <Card className="border border-white/70 bg-white/80">
+                    <CardHeader>
+                      <CardTitle className="text-lg">Page {result.pageNumber}</CardTitle>
+                      <CardDescription>Match {Math.round(result.score * 100)}%</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3 text-sm text-muted-foreground">
+                      <p>{result.snippet}...</p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openSource([result.chunkId], result.pageNumber)}
+                      >
+                        <BookOpen className="mr-2 h-4 w-4" />
+                        Source
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+            </motion.div>
           )}
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Ask my course</CardTitle>
-            <CardDescription>Ask a question and receive a cited answer.</CardDescription>
+            <CardTitle>Ask your course</CardTitle>
+            <CardDescription>Ask a question and get a cited answer.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
               <Input
                 value={question}
                 onChange={(event) => setQuestion(event.target.value)}
-                placeholder="Ask a question about the course"
+                placeholder="Ask a question about your notes"
               />
               <Button onClick={handleAsk} disabled={loadingAsk}>
+                <MessageCircle className="mr-2 h-4 w-4" />
                 {loadingAsk ? "Asking..." : "Ask"}
               </Button>
             </div>
             {answer ? (
-              <Card className="border border-primary/20 bg-primary/5">
+              <Card className="border border-primary/20 bg-white/80">
                 <CardHeader>
                   <CardTitle className="text-base">Answer</CardTitle>
-                  <CardDescription>Grounded in cited chunks.</CardDescription>
+                  <CardDescription>Sources included below.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3 text-sm text-muted-foreground">
                   <p className="text-foreground">{answer}</p>
@@ -257,14 +273,15 @@ export default function SearchPage() {
                   <div className="space-y-2">
                     {citations.map((citation) => (
                       <div key={citation.chunkId} className="rounded-md border border-dashed p-3 text-xs">
-                        <p className="font-medium">Chunk {citation.chunkId}</p>
+                        <p className="font-medium">Source excerpt</p>
                         <p className="text-muted-foreground">{citation.quote}</p>
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => openSource(askChunkIds, citation.pageNumber)}
                         >
-                          View source
+                          <BookOpen className="mr-2 h-4 w-4" />
+                          Source
                         </Button>
                       </div>
                     ))}

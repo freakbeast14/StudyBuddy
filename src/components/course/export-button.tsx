@@ -1,5 +1,6 @@
 "use client";
 
+import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toaster";
 
@@ -14,7 +15,8 @@ export function CourseExportButton({ courseId }: { courseId: string }) {
         window.location.href = `/api/courses/${courseId}/export`;
       }}
     >
-      Export flashcards
+      <Download className="mr-2 h-4 w-4" />
+      Export
     </Button>
   );
 }
