@@ -1,6 +1,6 @@
 # StudyBuddy AI
 
-Local-first study workspace that turns PDFs into lessons, flashcards, quizzes, and daily 10-minute review sessions.
+A study workspace that turns PDFs into lessons, flashcards, quizzes, and daily 10-minute review sessions.
 Everything stays grounded with page-level citations so students can trace every answer back to the source.
 
 ## Overview
