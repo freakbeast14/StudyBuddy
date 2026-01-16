@@ -21,23 +21,27 @@ const steps: { title: string; description: string; icon: LucideIcon }[] = [
 
 export function IngestionSteps() {
   return (
-    <div className="grid gap-4 sm:grid-cols-3">
-      {steps.map((step) => (
-        <Card key={step.title}>
-          <CardHeader className="flex flex-row items-center gap-3 space-y-0">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <step.icon className="h-5 w-5" />
+    <Card>
+      <CardHeader>
+        <CardTitle>What happens after upload</CardTitle>
+        <CardDescription>Follow the steps as your material is prepared.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {steps.map((step, index) => (
+          <div key={step.title} className="flex items-start gap-4">
+            <div className="flex flex-col items-center">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-primary">
+                <step.icon className="h-4 w-4" />
+              </div>
+              {index < steps.length - 1 ? <div className="mt-2 h-8 w-px bg-border" /> : null}
             </div>
             <div>
-              <CardTitle className="text-base">{step.title}</CardTitle>
-              <CardDescription>{step.description}</CardDescription>
+              <p className="text-sm font-semibold text-foreground">{step.title}</p>
+              <p className="text-xs text-muted-foreground">{step.description}</p>
             </div>
-          </CardHeader>
-          <CardContent className="text-xs text-muted-foreground">
-            Sources stay visible, so every card and quiz points back to the PDF.
-          </CardContent>
-        </Card>
-      ))}
-    </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
   );
 }

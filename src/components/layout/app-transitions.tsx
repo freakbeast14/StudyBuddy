@@ -8,7 +8,7 @@ export function AppTransitions({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   return (
-    <AnimatePresence mode="wait">
+    <AnimatePresence mode="sync">
       <motion.div
         key={pathname}
         variants={pageVariants}

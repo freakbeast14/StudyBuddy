@@ -171,11 +171,37 @@ export function UploadForm() {
     }
   };
 
+  const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const file = event.dataTransfer.files?.[0];
+    if (file) {
+      setState((prev) => ({ ...prev, file }));
+    }
+  };
+
+  const fileSizeLabel = state.file ? `${(state.file.size / 1024 / 1024).toFixed(1)} MB` : "PDF only";
+
   return (
     <div className="space-y-6">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid gap-3">
           <Label htmlFor="course">Course</Label>
+          <div className="flex flex-wrap gap-2">
+            {courses.map((course) => (
+              <button
+                key={course.id}
+                type="button"
+                onClick={() => setState((prev) => ({ ...prev, courseId: course.id }))}
+                className={`rounded-full border px-3 py-1 text-xs ${
+                  state.courseId === course.id
+                    ? "border-primary/40 bg-primary/10 text-primary"
+                    : "border-white/70 bg-white/80 text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {course.title}
+              </button>
+            ))}
+          </div>
           <select
             id="course"
             value={state.courseId}
@@ -217,14 +243,31 @@ export function UploadForm() {
         </div>
         <div className="grid gap-3">
           <Label htmlFor="file">PDF file</Label>
-          <div className="flex items-center gap-3 rounded-lg border border-dashed border-primary/40 bg-white/70 p-3">
-            <FileText className="h-5 w-5 text-muted-foreground" />
+          <div
+            className="flex items-center justify-between gap-3 rounded-2xl border border-dashed border-primary/40 bg-white/80 p-4"
+            onDragOver={(event) => event.preventDefault()}
+            onDrop={handleDrop}
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                <UploadCloud className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-foreground">
+                  {state.file?.name ?? "Drag a PDF here"}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {state.file ? fileSizeLabel : "or click to choose a file"}
+                </p>
+              </div>
+            </div>
             <Input
               id="file"
               type="file"
               accept="application/pdf"
               onChange={(e) => setState((prev) => ({ ...prev, file: e.target.files?.[0] ?? null }))}
               required
+              className="max-w-[200px]"
             />
           </div>
           <p className="text-xs text-muted-foreground">

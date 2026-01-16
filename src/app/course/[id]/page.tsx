@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { and, eq, sql } from "drizzle-orm";
-import { FileStack, PlayCircle, Sparkles } from "lucide-react";
 import { Breadcrumbs } from "@/components/layout/breadcrumbs";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { OutlineTree } from "@/components/course/outline-tree";
 import { GenerateOutlineButton } from "@/components/course/generate-outline-button";
+import { ChecklistCard } from "@/components/course/checklist-card";
 import { ShareLinkButton } from "@/components/course/share-link-button";
 import { CourseExportButton } from "@/components/course/export-button";
-import { Button } from "@/components/ui/button";
+import { ModuleRail } from "@/components/course/module-rail";
 import { db } from "@/db/client";
 import { cards, concepts, courses, documents, reviews } from "@/db/schema";
 import { getOrCreateDefaultUserId } from "@/lib/users";
@@ -27,6 +27,8 @@ interface OutlineModule {
   moduleTitle: string;
   lessons: OutlineLesson[];
 }
+
+export const revalidate = 30;
 
 export default async function CoursePage({ params }: { params: { id: string } }) {
   const courseId = params.id;
@@ -75,14 +77,6 @@ export default async function CoursePage({ params }: { params: { id: string } })
   const hasOutline = conceptRows.length > 0;
   const hasCards = Number(cardCount[0]?.count ?? 0) > 0;
   const hasReviews = Number(reviewCount[0]?.count ?? 0) > 0;
-  const firstLesson = conceptRows[0]?.lessonTitle;
-  const primaryCta = !hasOutline
-    ? { label: "Outline", href: null }
-    : !hasCards && firstLesson
-      ? { label: "Cards", href: `/lesson/${encodeURIComponent(firstLesson)}` }
-      : !hasReviews
-        ? { label: "Study", href: "/daily" }
-        : null;
 
   const outlineMap = new Map<string, Map<string, OutlineLesson>>();
   for (const concept of conceptRows) {
@@ -107,6 +101,10 @@ export default async function CoursePage({ params }: { params: { id: string } })
     moduleTitle,
     lessons: Array.from(lessons.values()),
   }));
+  const railModules = outline.map((module) => ({
+    moduleTitle: module.moduleTitle,
+    lessonCount: module.lessons.length,
+  }));
 
   return (
     <div className="space-y-6">
@@ -127,73 +125,47 @@ export default async function CoursePage({ params }: { params: { id: string } })
           <Badge variant="outline">Missing course</Badge>
         )}
       </div>
-
-      {!isValidUuid ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Course not found</CardTitle>
-            <CardDescription>This link does not match a course in your workspace.</CardDescription>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            Pick a course from the sidebar or upload a new PDF to create one.
-          </CardContent>
-        </Card>
-      ) : (
-        <Card className="border border-dashed bg-white/70">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg">Setup checklist</CardTitle>
-            <CardDescription>Quick steps to unlock the study flow.</CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-2 text-sm sm:grid-cols-2">
-            <ChecklistItem label="PDF uploaded" done={readyDocs > 0} />
-            <ChecklistItem label="Outline ready" done={hasOutline} />
-            <ChecklistItem label="Cards ready" done={hasCards} />
-            <ChecklistItem label="First session" done={hasReviews} />
-          </CardContent>
-          <CardContent className="pt-2">
-            {primaryCta ? (
-              primaryCta.href ? (
-                <Button asChild>
-                  <Link href={primaryCta.href} className="flex items-center gap-2">
-                    {primaryCta.label === "Cards" ? <FileStack className="h-4 w-4" /> : null}
-                    {primaryCta.label === "Study" ? <PlayCircle className="h-4 w-4" /> : null}
-                    {primaryCta.label === "Outline" ? <Sparkles className="h-4 w-4" /> : null}
-                    {primaryCta.label}
-                  </Link>
-                </Button>
-              ) : (
+      <div className="grid gap-6 lg:grid-cols-[180px_1fr_280px]">
+        <div className="hidden lg:block">
+          {outline.length ? <ModuleRail outline={railModules} /> : null}
+        </div>
+        <div className="space-y-6">
+          {!isValidUuid ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Course not found</CardTitle>
+                <CardDescription>This link does not match a course in your workspace.</CardDescription>
+              </CardHeader>
+              <CardContent className="text-sm text-muted-foreground">
+                Pick a course from the sidebar or upload a new PDF to create one.
+              </CardContent>
+            </Card>
+          ) : outline.length === 0 ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>No outline yet</CardTitle>
+                <CardDescription>Upload a PDF, then generate your outline to see modules and lessons.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm text-muted-foreground">
+                <p>Click Generate Outline to build your study map.</p>
                 <GenerateOutlineButton courseId={courseId} />
-              )
-            ) : (
-              <p className="text-xs text-muted-foreground">You're all set for today.</p>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {!isValidUuid ? null : outline.length === 0 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>No outline yet</CardTitle>
-            <CardDescription>Upload a PDF, then generate your outline to see modules and lessons.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm text-muted-foreground">
-            <p>Click Generate Outline to build your study map.</p>
-            <GenerateOutlineButton courseId={courseId} />
-          </CardContent>
-        </Card>
-      ) : (
-        <OutlineTree outline={outline} />
-      )}
-    </div>
-  );
-}
-
-function ChecklistItem({ label, done }: { label: string; done: boolean }) {
-  return (
-    <div className="flex items-center justify-between gap-2 rounded-md border border-white/70 bg-white/80 px-3 py-2 text-xs">
-      <span className={done ? "text-foreground" : "text-muted-foreground"}>{label}</span>
-      <Badge variant={done ? "secondary" : "outline"}>{done ? "Done" : "Todo"}</Badge>
+              </CardContent>
+            </Card>
+          ) : (
+            <OutlineTree outline={outline} />
+          )}
+        </div>
+        {isValidUuid ? (
+          <div className="space-y-3 lg:sticky lg:top-24">
+            <ChecklistCard
+              readyDocs={readyDocs}
+              hasOutline={hasOutline}
+              hasCards={hasCards}
+              hasReviews={hasReviews}
+            />
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

@@ -29,6 +29,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [courses, setCourses] = useState<CourseRow[]>([]);
   const [activeCourseId, setActiveCourseId] = useState<string>("");
+  const isHome = pathname === "/";
 
   useEffect(() => {
     fetch("/api/courses", { cache: "no-store" })
@@ -59,6 +60,36 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (pathname.startsWith("/daily")) return "/daily";
     return "";
   }, [pathname]);
+
+  if (isHome) {
+    return (
+      <ToastProvider>
+        <MotionConfig reducedMotion="user">
+          <div className="min-h-screen bg-background">
+            <header className="sticky top-0 z-40 border-b border-white/60 bg-background/80 px-6 py-4 backdrop-blur">
+              <div className="mx-auto flex w-full max-w-6xl items-center justify-between">
+                <Link href="/" className="flex items-center gap-2 text-base font-semibold">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  StudyBuddy
+                </Link>
+                <div className="flex items-center gap-2">
+                  <Button asChild size="sm" variant="outline">
+                    <Link href="/dashboard">Dashboard</Link>
+                  </Button>
+                  <Button asChild size="sm">
+                    <Link href="/upload">Upload</Link>
+                  </Button>
+                </div>
+              </div>
+            </header>
+            <main className="mx-auto w-full max-w-6xl px-6 pb-24 pt-8">
+              <AppTransitions>{children}</AppTransitions>
+            </main>
+          </div>
+        </MotionConfig>
+      </ToastProvider>
+    );
+  }
 
   return (
     <ToastProvider>

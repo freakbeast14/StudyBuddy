@@ -32,36 +32,32 @@ export default function UploadPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-white/70">
-          <CardHeader>
-            <CardTitle>What happens next</CardTitle>
-            <CardDescription>StudyBuddy prepares your material for learning.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4 text-sm text-muted-foreground">
-            <div className="flex items-start gap-3 rounded-lg border border-white/70 bg-white/70 p-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                <Sparkles className="h-5 w-5" />
+        <div className="space-y-6">
+          <Card className="bg-white/70">
+            <CardHeader>
+              <CardTitle>What happens next</CardTitle>
+              <CardDescription>StudyBuddy prepares your material for learning.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 text-sm text-muted-foreground">
+              <div className="flex items-start gap-3 rounded-lg border border-white/70 bg-white/70 p-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                  <Sparkles className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="font-medium text-foreground">We read and organize your PDF</p>
+                  <p>Key ideas are grouped into lessons and concepts you can follow.</p>
+                </div>
               </div>
-              <div>
-                <p className="font-medium text-foreground">We read and organize your PDF</p>
-                <p>Key ideas are grouped into lessons and concepts you can follow.</p>
+              <Separator />
+              <div className="space-y-2">
+                <p className="font-medium text-foreground">We create practice materials</p>
+                <p>Flashcards and quizzes are generated with clear source links.</p>
               </div>
-            </div>
-            <Separator />
-            <div className="space-y-2">
-              <p className="font-medium text-foreground">We create practice materials</p>
-              <p>Flashcards and quizzes are generated with clear source links.</p>
-            </div>
-            <Separator />
-            <div className="space-y-2">
-              <p className="font-medium text-foreground">You review in daily sessions</p>
-              <p>Short, focused sessions help you stay consistent without burnout.</p>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+          <IngestionSteps />
+        </div>
       </div>
-
-      <IngestionSteps />
     </div>
   );
 }

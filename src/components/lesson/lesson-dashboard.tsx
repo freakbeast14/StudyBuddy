@@ -88,7 +88,6 @@ export function LessonDashboard({ courseId, moduleTitle, lessonTitle, concepts }
   const [quizLoading, setQuizLoading] = useState(false);
   const [deckIndex, setDeckIndex] = useState(0);
   const [deckShowAnswer, setDeckShowAnswer] = useState(false);
-  const [deckLastRating, setDeckLastRating] = useState<DeckRating | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
   const [helpConcept, setHelpConcept] = useState<ConceptRow | null>(null);
   const [helpExplanation, setHelpExplanation] = useState<HelpExplanation | null>(null);
@@ -153,7 +152,6 @@ export function LessonDashboard({ courseId, moduleTitle, lessonTitle, concepts }
   useEffect(() => {
     setDeckIndex(0);
     setDeckShowAnswer(false);
-    setDeckLastRating(null);
   }, [cards]);
 
   useEffect(() => {
@@ -339,7 +337,6 @@ export function LessonDashboard({ courseId, moduleTitle, lessonTitle, concepts }
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ cardId: deckCard.id, rating }),
       });
-      setDeckLastRating(rating);
       setDeckIndex((prev) => Math.min(prev + 1, cards.length - 1));
       setDeckShowAnswer(false);
     },
@@ -413,67 +410,159 @@ export function LessonDashboard({ courseId, moduleTitle, lessonTitle, concepts }
 
       {errorMessage ? <p className="text-sm text-rose-500">{errorMessage}</p> : null}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Concepts</CardTitle>
-          <CardDescription>{concepts.length} concepts to focus on today.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <motion.div
-            className="grid gap-4 sm:grid-cols-2"
-            variants={staggerContainer}
-            initial="initial"
-            animate="animate"
-          >
-            {concepts.map((concept) => (
-              <motion.div key={concept.id} variants={staggerItem} {...cardHoverTap}>
-                <div className="rounded-lg border border-white/70 bg-white/80 p-3 text-sm">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="font-medium">{concept.title}</p>
-                    <Button variant="outline" size="sm" onClick={() => handleHelp(concept)} aria-label="Explain this">
-                      <HelpCircle className="mr-2 h-4 w-4" />
-                      Explain
-                    </Button>
-                  </div>
-                  {concept.summary ? <p className="mt-2 text-muted-foreground">{concept.summary}</p> : null}
-                  {concept.pageRange ? (
-                    <p className="mt-2 text-xs text-muted-foreground">Pages {concept.pageRange}</p>
-                  ) : null}
-                </div>
+      <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Concepts</CardTitle>
+              <CardDescription>{concepts.length} concepts to focus on today.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <motion.div
+                className="grid gap-4 sm:grid-cols-2"
+                variants={staggerContainer}
+                initial="initial"
+                animate="animate"
+              >
+                {concepts.map((concept) => (
+                  <motion.div key={concept.id} variants={staggerItem} {...cardHoverTap}>
+                    <div className="rounded-lg border border-white/70 bg-white/80 p-3 text-sm">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="font-medium">{concept.title}</p>
+                        <Button variant="outline" size="sm" onClick={() => handleHelp(concept)} aria-label="Explain this">
+                          <HelpCircle className="mr-2 h-4 w-4" />
+                          Explain
+                        </Button>
+                      </div>
+                      {concept.summary ? <p className="mt-2 text-muted-foreground">{concept.summary}</p> : null}
+                      {concept.pageRange ? (
+                        <p className="mt-2 text-xs text-muted-foreground">Pages {concept.pageRange}</p>
+                      ) : null}
+                    </div>
+                  </motion.div>
+                ))}
               </motion.div>
-            ))}
-          </motion.div>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Flashcards</CardTitle>
-          <CardDescription>{cards.length} cards ready to review.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {cardsLoading ? (
-            <div className="grid gap-3">
-              <Skeleton className="h-24" />
-              <Skeleton className="h-24" />
-              <Skeleton className="h-24" />
-            </div>
-          ) : cards.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No cards yet. Generate flashcards to populate this list.</p>
-          ) : (
-            <div className="space-y-6">
-              <div className="rounded-2xl border border-white/70 bg-white/80 p-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Deck mode</p>
-                    <p className="text-sm text-muted-foreground">Flip cards and rate to stay consistent.</p>
-                  </div>
-                  <Badge variant="outline">
-                    {deckIndex + 1} / {cards.length}
-                  </Badge>
+          <Card>
+            <CardHeader>
+              <CardTitle>Card library</CardTitle>
+              <CardDescription>Edit, refine, and manage cards.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {cardsLoading ? (
+                <div className="grid gap-3">
+                  <Skeleton className="h-24" />
+                  <Skeleton className="h-24" />
+                  <Skeleton className="h-24" />
                 </div>
-                <Progress value={deckProgress} className="mt-3" />
-                <div className="mt-4">
+              ) : cards.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No cards yet. Generate flashcards to populate this list.</p>
+              ) : (
+                <motion.div variants={staggerContainer} initial="initial" animate="animate" className="space-y-4">
+                  {cards.map((card) => {
+                    const pageNumbers = card.citations?.pageNumbers ?? [];
+                    return (
+                      <motion.div key={card.id} variants={staggerItem} {...cardHoverTap}>
+                        <div className="rounded-lg border border-white/70 bg-white/70 p-3">
+                          <div className="flex flex-wrap items-start justify-between gap-2">
+                            <div>
+                              <Badge variant="outline">{card.conceptTitle}</Badge>
+                              {card.moduleTitle ? (
+                                <Badge variant="secondary" className="ml-2">
+                                  {card.moduleTitle}
+                                </Badge>
+                              ) : null}
+                            </div>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleViewSource(card)}
+                                disabled={
+                                  !(
+                                    (Array.isArray(card.citations?.chunkIds) && card.citations?.chunkIds?.length) ||
+                                    (Array.isArray(card.conceptCitationIds) && card.conceptCitationIds.length)
+                                  )
+                                }
+                              >
+                                <BookOpen className="mr-2 h-4 w-4" />
+                                Source
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={() => handleEdit(card)}>
+                                <Pencil className="mr-2 h-4 w-4" />
+                                Edit
+                              </Button>
+                              <Button variant="destructive" size="sm" onClick={() => handleDelete(card.id)}>
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </Button>
+                            </div>
+                          </div>
+                          <Separator className="my-3" />
+                          {editingCardId === card.id ? (
+                            <div className="space-y-2">
+                              <Input value={editPrompt} onChange={(e) => setEditPrompt(e.target.value)} />
+                              <Textarea value={editAnswer} onChange={(e) => setEditAnswer(e.target.value)} />
+                              <div className="flex items-center gap-2">
+                                <Button size="sm" onClick={() => handleSave(card.id)}>
+                                  Save
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={() => setEditingCardId(null)}>
+                                  Cancel
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="space-y-2">
+                              <p className="font-medium">{card.prompt}</p>
+                              <p className="text-muted-foreground">{card.answer}</p>
+                            </div>
+                          )}
+                          {pageNumbers.length ? (
+                            <div className="mt-3 text-xs text-muted-foreground">
+                              Pages {pageNumbers.join(", ")} -{" "}
+                              <Link
+                                href={`/course/${courseId}?page=${pageNumbers[0]}`}
+                                className="text-primary hover:underline"
+                              >
+                                Open PDF
+                              </Link>
+                            </div>
+                          ) : null}
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </motion.div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="space-y-6 lg:sticky lg:top-24">
+          <Card>
+            <CardHeader>
+              <CardTitle>Study deck</CardTitle>
+              <CardDescription>{cards.length} cards ready to review.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {cardsLoading ? (
+                <div className="grid gap-3">
+                  <Skeleton className="h-24" />
+                </div>
+              ) : cards.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Generate flashcards to start reviewing.</p>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Deck mode</p>
+                    <Badge variant="outline">
+                      {deckIndex + 1} / {cards.length}
+                    </Badge>
+                  </div>
+                  <Progress value={deckProgress} />
                   <FlashcardDeck
                     card={
                       deckCard
@@ -500,211 +589,140 @@ export function LessonDashboard({ courseId, moduleTitle, lessonTitle, concepts }
                     onRate={(rating) => handleDeckRate(rating)}
                     onViewSource={() => deckCard && handleViewSource(deckCard)}
                   />
-                </div>
-                <div className="mt-4 flex flex-wrap items-center gap-2">
-                  {(["Again", "Hard", "Good", "Easy"] as DeckRating[]).map((rating) => (
-                    <Button
-                      key={rating}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDeckRate(rating)}
-                      disabled={!deckShowAnswer}
-                      aria-label={`Rate ${rating}`}
-                    >
-                      {rating}
+                  <div className="flex flex-wrap items-center gap-2">
+                    {(["Again", "Hard", "Good", "Easy"] as DeckRating[]).map((rating) => (
+                      <Button
+                        key={rating}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeckRate(rating)}
+                        disabled={!deckShowAnswer}
+                        aria-label={`Rate ${rating}`}
+                      >
+                        {rating}
+                      </Button>
+                    ))}
+                    <Button variant="ghost" size="sm" className="ml-auto" onClick={handleDeckPrev} aria-label="Previous card">
+                      Back
                     </Button>
-                  ))}
-                  <Button variant="ghost" size="sm" className="ml-auto" onClick={handleDeckPrev} aria-label="Previous card">
-                    Back
-                  </Button>
+                  </div>
                 </div>
-                {deckLastRating ? (
-                  <p className="mt-2 text-xs text-muted-foreground">Last rating: {deckLastRating}</p>
-                ) : null}
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Shortcuts: Space = flip, 1-4 = rating, left/right = navigate.
-                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Lesson quiz</CardTitle>
+                <CardDescription>Check your understanding with a short quiz.</CardDescription>
               </div>
-
-              <motion.div variants={staggerContainer} initial="initial" animate="animate" className="space-y-4">
-                {cards.map((card) => {
-                  const pageNumbers = card.citations?.pageNumbers ?? [];
-                  return (
-                    <motion.div key={card.id} variants={staggerItem} {...cardHoverTap}>
-                      <div className="rounded-lg border border-white/70 bg-white/70 p-3">
-                        <div className="flex flex-wrap items-start justify-between gap-2">
-                          <div>
-                            <Badge variant="outline">{card.conceptTitle}</Badge>
-                            {card.moduleTitle ? (
-                              <Badge variant="secondary" className="ml-2">
-                                {card.moduleTitle}
-                              </Badge>
-                            ) : null}
-                          </div>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleViewSource(card)}
-                              disabled={
-                                !(
-                                  (Array.isArray(card.citations?.chunkIds) && card.citations?.chunkIds?.length) ||
-                                  (Array.isArray(card.conceptCitationIds) && card.conceptCitationIds.length)
-                                )
-                              }
-                            >
-                              <BookOpen className="mr-2 h-4 w-4" />
-                              Source
-                            </Button>
-                            <Button variant="ghost" size="sm" onClick={() => handleEdit(card)}>
-                              <Pencil className="mr-2 h-4 w-4" />
-                              Edit
-                            </Button>
-                            <Button variant="destructive" size="sm" onClick={() => handleDelete(card.id)}>
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
-                            </Button>
-                          </div>
-                        </div>
-                        <Separator className="my-3" />
-                        {editingCardId === card.id ? (
-                          <div className="space-y-2">
-                            <Input value={editPrompt} onChange={(e) => setEditPrompt(e.target.value)} />
-                            <Textarea value={editAnswer} onChange={(e) => setEditAnswer(e.target.value)} />
-                            <div className="flex items-center gap-2">
-                              <Button size="sm" onClick={() => handleSave(card.id)}>
-                                Save
-                              </Button>
-                              <Button size="sm" variant="outline" onClick={() => setEditingCardId(null)}>
-                                Cancel
-                              </Button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="space-y-2">
-                            <p className="font-medium">{card.prompt}</p>
-                            <p className="text-muted-foreground">{card.answer}</p>
-                          </div>
-                        )}
-                        {pageNumbers.length ? (
-                          <div className="mt-3 text-xs text-muted-foreground">
-                            Pages {pageNumbers.join(", ")} -{" "}
-                            <Link
-                              href={`/course/${courseId}?page=${pageNumbers[0]}`}
-                              className="text-primary hover:underline"
-                            >
-                              Open PDF
-                            </Link>
-                          </div>
-                        ) : null}
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </motion.div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Lesson quiz</CardTitle>
-          <CardDescription>Check your understanding with a short quiz.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {quizLoading ? (
-            <div className="grid gap-3">
-              <Skeleton className="h-16" />
-              <Skeleton className="h-24" />
-            </div>
-          ) : !quiz?.questions?.length ? (
-            <p className="text-sm text-muted-foreground">No quiz yet. Generate a quiz to preview it here.</p>
-          ) : (
-            <div className="space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="text-sm text-muted-foreground">
-                  Question {quizIndex + 1} of {quiz.questions.length}
+              <div
+                className="flex h-12 w-12 items-center justify-center rounded-full text-xs font-semibold text-foreground"
+                style={{
+                  background: `conic-gradient(hsl(var(--primary)) ${Math.round(quizProgress * 3.6)}deg, #e5e7eb 0deg)`,
+                }}
+              >
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white">
+                  {Math.round(quizProgress)}%
                 </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {quizLoading ? (
+                <div className="grid gap-3">
+                  <Skeleton className="h-16" />
+                  <Skeleton className="h-24" />
+                </div>
+              ) : !quiz?.questions?.length ? (
+                <p className="text-sm text-muted-foreground">No quiz yet. Generate a quiz to preview it here.</p>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="text-sm text-muted-foreground">
+                      Question {quizIndex + 1} of {quiz.questions.length}
+                    </div>
                     <div className="rounded-lg border border-white/70 bg-white/70 px-3 py-1 text-sm">
                       Score: {totalScore} / {quiz.questions.length}
                     </div>
                   </div>
-              <Progress value={quizProgress} />
-              <AnimatePresence mode="wait">
-                {currentQuestion ? (
-                  <motion.div
-                    key={`${currentQuestion.question}-${quizIndex}`}
-                    className="rounded-lg border p-4"
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -12 }}
-                    transition={{ duration: 0.25 }}
-                  >
-                    <p className="font-medium">{currentQuestion.question}</p>
-                    <div className="mt-3 flex flex-wrap gap-2 text-sm">
-                      {currentQuestion.options.map((option) => {
-                        const selection = quizSelections[quizIndex];
-                        const normalizedAnswer = resolveAnswer(currentQuestion);
-                        const isSelected = selection === option;
-                        const showCorrect = selection && option === normalizedAnswer;
-                        const showIncorrect = selection && isSelected && option !== normalizedAnswer;
-                        return (
-                          <motion.div
-                            key={option}
-                            whileHover={{ y: -2 }}
-                            whileTap={{ scale: 0.98 }}
-                            animate={showCorrect ? { scale: 1.04 } : showIncorrect ? { x: [0, -6, 6, -4, 4, 0] } : {}}
+                  <Progress value={quizProgress} />
+                  <AnimatePresence mode="wait">
+                    {currentQuestion ? (
+                      <motion.div
+                        key={`${currentQuestion.question}-${quizIndex}`}
+                        className="rounded-lg border p-4"
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -12 }}
+                        transition={{ duration: 0.25 }}
+                      >
+                        <p className="font-medium">{currentQuestion.question}</p>
+                        <div className="mt-3 flex flex-wrap gap-2 text-sm">
+                          {currentQuestion.options.map((option) => {
+                            const selection = quizSelections[quizIndex];
+                            const normalizedAnswer = resolveAnswer(currentQuestion);
+                            const isSelected = selection === option;
+                            const showCorrect = selection && option === normalizedAnswer;
+                            const showIncorrect = selection && isSelected && option !== normalizedAnswer;
+                            return (
+                              <motion.div
+                                key={option}
+                                whileHover={{ y: -2 }}
+                                whileTap={{ scale: 0.98 }}
+                                animate={showCorrect ? { scale: 1.04 } : showIncorrect ? { x: [0, -6, 6, -4, 4, 0] } : {}}
+                              >
+                                <Button
+                                  type="button"
+                                  variant={showCorrect ? "default" : showIncorrect ? "destructive" : "outline"}
+                                  size="sm"
+                                  onClick={() =>
+                                    setQuizSelections((prev) => ({
+                                      ...prev,
+                                      [quizIndex]: option,
+                                    }))
+                                  }
+                                  aria-label={`Select ${option}`}
+                                >
+                                  {option}
+                                </Button>
+                              </motion.div>
+                            );
+                          })}
+                        </div>
+                        {quizSelections[quizIndex] ? (
+                          <p className="mt-3 text-xs text-muted-foreground">
+                            {quizSelections[quizIndex] === resolveAnswer(currentQuestion) ? "Correct" : "Incorrect"} -
+                            Answer: {resolveAnswer(currentQuestion)}
+                          </p>
+                        ) : null}
+                        <div className="mt-4 flex flex-wrap items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setQuizIndex((prev) => Math.max(prev - 1, 0))}
+                            disabled={quizIndex === 0}
                           >
-                            <Button
-                              type="button"
-                              variant={showCorrect ? "default" : showIncorrect ? "destructive" : "outline"}
-                              size="sm"
-                              onClick={() =>
-                                setQuizSelections((prev) => ({
-                                  ...prev,
-                                  [quizIndex]: option,
-                                }))
-                              }
-                              aria-label={`Select ${option}`}
-                            >
-                              {option}
-                            </Button>
-                          </motion.div>
-                        );
-                      })}
-                    </div>
-                    {quizSelections[quizIndex] ? (
-                      <p className="mt-3 text-xs text-muted-foreground">
-                        {quizSelections[quizIndex] === resolveAnswer(currentQuestion) ? "Correct" : "Incorrect"} -
-                        Answer: {resolveAnswer(currentQuestion)}
-                      </p>
+                            Back
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setQuizIndex((prev) => Math.min(prev + 1, quiz.questions.length - 1))}
+                            disabled={quizIndex >= quiz.questions.length - 1}
+                          >
+                            Next
+                          </Button>
+                        </div>
+                      </motion.div>
                     ) : null}
-                    <div className="mt-4 flex flex-wrap items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setQuizIndex((prev) => Math.max(prev - 1, 0))}
-                        disabled={quizIndex === 0}
-                      >
-                        Back
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setQuizIndex((prev) => Math.min(prev + 1, quiz.questions.length - 1))}
-                        disabled={quizIndex >= quiz.questions.length - 1}
-                      >
-                        Next
-                      </Button>
-                    </div>
-                  </motion.div>
-                ) : null}
-              </AnimatePresence>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                  </AnimatePresence>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
       </div>
       <SourceDrawer
         open={sourceOpen}

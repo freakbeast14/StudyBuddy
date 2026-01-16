@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { addDays, format, startOfDay, startOfWeek } from "date-fns";
 import { and, desc, eq, gte, lt, sql } from "drizzle-orm";
-import { BookOpen, CalendarCheck2, FileText, PlayCircle, Search, UploadCloud } from "lucide-react";
+import { BookOpen, CalendarCheck2, FileText, Search, UploadCloud } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,10 +9,15 @@ import { ProgressChart } from "@/components/progress/progress-chart";
 import { db } from "@/db/client";
 import { cards, courses, documents, reviews, srsState } from "@/db/schema";
 import { getOrCreateDefaultUserId } from "@/lib/users";
+import { StudyToday } from "@/components/dashboard/study-today";
+import { DueDonut } from "@/components/dashboard/due-donut";
+import { RecentLessons } from "@/components/dashboard/recent-lessons";
 
 export const metadata = {
   title: "Dashboard - StudyBuddy AI",
 };
+
+export const revalidate = 30;
 
 const statusLabels: Record<string, { label: string; className: string }> = {
   pending: { label: "Queued", className: "border-amber-500/30 bg-amber-500/10 text-amber-700" },
@@ -28,7 +33,7 @@ export default async function DashboardPage() {
   const weekEnd = addDays(today, 7);
   const weekStart = startOfWeek(today, { weekStartsOn: 1 });
 
-  const [courseCount, cardCount, dueToday, dueTomorrow, reviewedThisWeek, recentDocs] = await Promise.all([
+  const [courseCount, cardCount, dueToday, dueTomorrow, reviewedThisWeek, recentDocs, recentLessons] = await Promise.all([
     db.select({ count: sql<number>`count(*)` }).from(courses),
     db.select({ count: sql<number>`count(*)` }).from(cards),
     db
@@ -53,6 +58,15 @@ export default async function DashboardPage() {
       .from(documents)
       .orderBy(desc(documents.createdAt))
       .limit(5),
+    db.execute<{ lessonTitle: string; moduleTitle: string | null; conceptCount: number }>(sql`
+      select lesson_title as "lessonTitle",
+             module_title as "moduleTitle",
+             count(*)::int as "conceptCount"
+      from concepts
+      group by lesson_title, module_title
+      order by max(created_at) desc
+      limit 8
+    `),
   ]);
 
   const dueRows = await db.execute<{ day: Date; count: number }>(sql`
@@ -75,6 +89,12 @@ export default async function DashboardPage() {
     return { name: format(day, "EEE"), due: dueMap.get(key) ?? 0 };
   });
 
+  const donutData = [
+    { name: "Due today", value: Number(dueToday[0]?.count ?? 0), color: "#f97316" },
+    { name: "Due tomorrow", value: Number(dueTomorrow[0]?.count ?? 0), color: "#38bdf8" },
+    { name: "Upcoming", value: Math.max(0, 12 - Number(dueToday[0]?.count ?? 0) - Number(dueTomorrow[0]?.count ?? 0)), color: "#22c55e" },
+  ];
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -84,12 +104,6 @@ export default async function DashboardPage() {
           <p className="text-muted-foreground">Your study plan, progress, and next steps.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button asChild>
-            <Link href="/daily" className="flex items-center gap-2">
-              <PlayCircle className="h-4 w-4" />
-              Study
-            </Link>
-          </Button>
           <Button variant="outline" asChild>
             <Link href="/upload" className="flex items-center gap-2">
               <UploadCloud className="h-4 w-4" />
@@ -97,6 +111,27 @@ export default async function DashboardPage() {
             </Link>
           </Button>
         </div>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
+        <StudyToday dueCount={Number(dueToday[0]?.count ?? 0)} />
+        <Card>
+          <CardHeader>
+            <CardTitle>Focus rings</CardTitle>
+            <CardDescription>Due now, tomorrow, and upcoming.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <DueDonut data={donutData} />
+            <div className="mt-2 grid grid-cols-3 text-xs text-muted-foreground">
+              {donutData.map((item) => (
+                <div key={item.name} className="flex items-center gap-2">
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+                  {item.name}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -207,25 +242,32 @@ export default async function DashboardPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Courses</CardTitle>
-            <CardDescription>Your learning spaces.</CardDescription>
+            <CardTitle>Recent lessons</CardTitle>
+            <CardDescription>Jump back into a lesson.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="flex items-center justify-between rounded-lg border border-white/70 bg-white/80 p-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Total courses</p>
-                <p className="text-3xl font-semibold">{courseCount[0]?.count ?? 0}</p>
-              </div>
-              <Button asChild variant="outline">
-                <Link href="/course" className="flex items-center gap-2">
-                  <BookOpen className="h-4 w-4" />
-                  View
-                </Link>
-              </Button>
-            </div>
+            <RecentLessons lessons={recentLessons.rows.splice(0, 3)} />
           </CardContent>
         </Card>
       </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Course overview</CardTitle>
+          <CardDescription>All your courses in one place.</CardDescription>
+        </CardHeader>
+        <CardContent className="flex items-center justify-between rounded-lg border border-white/70 bg-white/80 p-4">
+          <div>
+            <p className="text-sm text-muted-foreground">Total courses</p>
+            <p className="text-3xl font-semibold">{courseCount[0]?.count ?? 0}</p>
+          </div>
+          <Button asChild variant="outline">
+            <Link href="/course" className="flex items-center gap-2">
+              <BookOpen className="h-4 w-4" />
+              View
+            </Link>
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }
