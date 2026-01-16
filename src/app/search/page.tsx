@@ -126,6 +126,7 @@ export default function SearchPage() {
   };
 
   const askChunkIds = useMemo(() => citations.map((citation) => citation.chunkId), [citations]);
+  const keywords = useMemo(() => query.trim().split(/\s+/).filter(Boolean), [query]);
 
   return (
     <>
@@ -221,7 +222,28 @@ export default function SearchPage() {
                       <CardDescription>Match {Math.round(result.score * 100)}%</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-3 text-sm text-muted-foreground">
-                      <p>{result.snippet}...</p>
+                      <p>
+                        {highlightSnippet(result.snippet, keywords).map((part, idx) =>
+                          part.match ? (
+                            <span key={`${part.text}-${idx}`} className="rounded bg-primary/10 px-1 text-foreground">
+                              {part.text}
+                            </span>
+                          ) : (
+                            <span key={`${part.text}-${idx}`}>{part.text}</span>
+                          )
+                        )}
+                        ...
+                      </p>
+                      <div className="flex items-center gap-2">
+                        {[0, 1, 2].map((index) => (
+                          <div
+                            key={`${result.chunkId}-${index}`}
+                            className="flex h-10 w-8 items-center justify-center rounded-md border border-white/70 bg-white/80 text-[10px] text-muted-foreground"
+                          >
+                            {index === 0 ? `P${result.pageNumber}` : ""}
+                          </div>
+                        ))}
+                      </div>
                       <Button
                         variant="outline"
                         size="sm"
@@ -302,4 +324,20 @@ export default function SearchPage() {
       />
     </>
   );
+}
+
+function highlightSnippet(text: string, keywords: string[]) {
+  if (!keywords.length) return [{ text, match: false }];
+  const escaped = keywords.map((word) => escapeRegExp(word)).join("|");
+  const splitPattern = new RegExp(`(${escaped})`, "gi");
+  const testPattern = new RegExp(`^(${escaped})$`, "i");
+  const parts = text.split(splitPattern);
+  return parts.map((part) => ({
+    text: part,
+    match: testPattern.test(part),
+  }));
+}
+
+function escapeRegExp(input: string) {
+  return input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

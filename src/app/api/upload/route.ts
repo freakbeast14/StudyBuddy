@@ -50,7 +50,11 @@ export async function POST(request: Request) {
 
     const boss = new Boss({ connectionString: env.DATABASE_URL });
     await boss.start();
-    await boss.send(JOBS.PROCESS_DOCUMENT, { documentId });
+    await boss.send(
+      JOBS.PROCESS_DOCUMENT,
+      { documentId },
+      { retryLimit: 3, retryDelay: 60, retryBackoff: true }
+    );
     await boss.stop();
 
     return NextResponse.json({ documentId });

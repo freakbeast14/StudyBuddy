@@ -5,6 +5,7 @@ import { db } from "@/db/client";
 import { chunks, documents } from "@/db/schema";
 import { env } from "@/env";
 import { chunkPagesWithOverlap, type PageChunk } from "@/jobs/chunking";
+import { createEmbeddings } from "@/lib/openai";
 import { JOBS, type ProcessDocumentPayload } from "./types";
 
 interface ChunkInsert {
@@ -114,23 +115,5 @@ async function embedChunks(chunkInserts: ChunkInsert[]): Promise<ChunkInsert[]> 
 }
 
 async function fetchEmbeddings(inputs: string[]): Promise<number[][]> {
-  const response = await fetch("https://api.openai.com/v1/embeddings", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${env.OPENAI_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: env.OPENAI_EMBED_MODEL,
-      input: inputs,
-    }),
-  });
-
-  if (!response.ok) {
-    const message = await response.text();
-    throw new Error(`OpenAI embeddings failed: ${response.status} ${message}`);
-  }
-
-  const data = (await response.json()) as { data: Array<{ embedding: number[] }> };
-  return data.data.map((item) => item.embedding);
+  return createEmbeddings(inputs);
 }

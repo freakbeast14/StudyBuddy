@@ -11,6 +11,8 @@ export const metadata = {
   title: "Courses - StudyBuddy AI",
 };
 
+export const revalidate = 30;
+
 export default async function CoursesPage() {
   const courseRows = await db
     .select({

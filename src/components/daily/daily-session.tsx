@@ -147,6 +147,17 @@ export function DailySession() {
   const remainingMinutes = Math.floor(remainingMs / 60000);
   const remainingSeconds = Math.floor((remainingMs % 60000) / 1000);
   const timeLabel = `${remainingMinutes}:${remainingSeconds.toString().padStart(2, "0")}`;
+  const progressAngle = Math.round(((SESSION_MS - remainingMs) / SESSION_MS) * 360);
+  const moodClass =
+    lastRating === "Easy"
+      ? "bg-emerald-50/70"
+      : lastRating === "Good"
+        ? "bg-sky-50/70"
+        : lastRating === "Hard"
+          ? "bg-amber-50/70"
+          : lastRating === "Again"
+            ? "bg-rose-50/70"
+            : "bg-white/60";
 
   if (loadingQueue) {
     return (
@@ -206,24 +217,33 @@ export function DailySession() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className={`rounded-3xl border border-white/60 p-6 shadow-[0_30px_60px_-50px_rgba(15,23,42,0.4)] ${moodClass}`}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Daily session</p>
-          <p className="text-sm text-muted-foreground">Review a few cards to stay consistent.</p>
+          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Focus mode</p>
+          <p className="text-sm text-muted-foreground">Stay in the flow with a short session.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <Badge variant="outline">
             {reviewedCount} / {maxReviews}
           </Badge>
-          <Badge variant="secondary">{timeLabel}</Badge>
+          <div
+            className="relative flex h-12 w-12 items-center justify-center rounded-full"
+            style={{ background: `conic-gradient(hsl(var(--primary)) ${progressAngle}deg, #e5e7eb 0deg)` }}
+          >
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-xs font-semibold text-foreground">
+              {timeLabel}
+            </div>
+          </div>
         </div>
       </div>
 
-      <Progress value={progressValue} />
+      <div className="mt-4">
+        <Progress value={progressValue} />
+      </div>
 
       {card ? (
-        <div className="space-y-4">
+        <div className="mt-6 space-y-4">
           <FlashcardDeck
             card={{
               id: card.cardId,
