@@ -1,36 +1,142 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# StudyBuddy AI
 
-## Getting Started
+Local-first study workspace that turns PDFs into lessons, flashcards, quizzes, and daily 10-minute review sessions.
+Everything stays grounded with page-level citations so students can trace every answer back to the source.
 
-First, run the development server:
+## Overview
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+StudyBuddy AI helps students:
+- Upload PDFs and auto-generate structured outlines (modules, lessons, concepts).
+- Create flashcards and quizzes with citations tied to pages and chunk ids.
+- Run daily sessions using spaced repetition (SM-2).
+- Track progress with charts and upcoming review forecasts.
+- Search and ask questions with source citations.
+
+## Usage
+
+- Upload PDFs and track ingestion status.
+- Generate outlines, cards, and quizzes from the course page.
+- Review cards in daily focus sessions.
+- Search and ask questions with cited sources.
+- Share read-only course links and export flashcards to CSV.
+
+## Architecture
+
+```mermaid
+flowchart LR
+  subgraph Client["Web Client"]
+    A["UI<br>(Next.js App Router)"]
+    H["react-pdf Viewer<br>+ Source Drawer"]
+  end
+
+  subgraph Server["Next.js Server"]
+    B["Route Handlers<br>/api/*"]
+    I["Server Actions<br>(if used)"]
+  end
+
+  subgraph Jobs["Background Jobs"]
+    J["pg-boss Worker"]
+    K["PROCESS_DOCUMENT<br>Extract -> Chunk -> Embed"]
+    L["Outline + Cards + Quiz Gen"]
+  end
+
+  subgraph Data["Local Data"]
+    C[("Postgres<br>Drizzle ORM")]
+    V[("pgvector<br>Similarity Index")]
+    D["Local Files<br>./data/uploads"]
+  end
+
+  subgraph AI["OpenAI"]
+    E["Embeddings"]
+    F["Generation"]
+  end
+
+  A --> B
+  A --> H
+  B --> C
+  B --> V
+  B --> D
+  B --> E
+  B --> F
+  B --> J
+  J --> K --> L
+  K --> D
+  K --> C
+  K --> E
+  L --> C
+  L --> F
+  V --> C
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Tech Stack
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- Frontend: Next.js (App Router), React, TypeScript, Tailwind CSS, shadcn/ui, lucide-react, Framer Motion, Recharts, react-pdf
+- Backend: Next.js Route Handlers, Drizzle ORM, Zod
+- Jobs: pg-boss (Postgres-backed queue)
+- DB: PostgreSQL with pgvector extension
+- Storage: local filesystem under `./data/uploads`
+- AI: OpenAI embeddings + generation
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Environment Variables
 
-## Learn More
+Create a `.env` file:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+DATABASE_URL=postgres://...
+OPENAI_API_KEY=your_openai_key_here
+OPENAI_MODEL=gpt-4o-mini
+OPENAI_EMBED_MODEL=text-embedding-3-small
+DATA_DIR=./data
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Local Setup (Brief)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1) Install dependencies
+```bash
+pnpm install
+```
 
-## Deploy on Vercel
+2) Ensure Postgres extensions exist
+```sql
+CREATE EXTENSION IF NOT EXISTS vector;
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+3) Run migrations
+```bash
+pnpm drizzle-kit migrate
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+4) Run the app and worker
+```bash
+pnpm dev
+pnpm worker
+```
+
+## Key User Flows
+
+- Upload: add a PDF and watch ingestion progress.
+- Course: generate outline, view modules/lessons/concepts.
+- Lesson: generate cards/quizzes, review with citations.
+- Daily: run 10-minute sessions with SM-2 ratings.
+- Progress: view due forecast, mastery ladder, and heatmaps.
+- Search: semantic search + "ask my course" with citations.
+
+## Scripts
+
+- `pnpm dev` - start the Next.js app
+- `pnpm worker` - start the pg-boss worker
+- `pnpm lint` - lint the codebase
+- `pnpm test` - run Vitest unit tests
+- `pnpm e2e` - run Playwright e2e test
+
+## Notes
+
+- No Docker/AWS/Cloudflare; runs fully local.
+- PDFs are stored at `./data/uploads/{documentId}.pdf`.
+- OpenAI calls are retried with backoff for reliability.
+
+---
+
+**Last Updated:** March 1, 2026  
+**Version:** 1.0.0
